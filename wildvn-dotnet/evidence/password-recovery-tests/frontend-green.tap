@@ -1,0 +1,40 @@
+✔ forgot trims input, blocks duplicate submits and shows success only after API resolves (101.106724ms)
+✔ forgot rejects malformed address without contacting API (23.835633ms)
+✔ reset captures token in memory and removes it from URL before submission (23.67421ms)
+✔ reset validates confirmation and UTF-8 byte limit before contacting API (19.742975ms)
+✔ successful reset remains successful when persisted local auth storage throws (21.205636ms)
+✔ new same-document email fragment replaces old in-memory reset token (16.857676ms)
+✔ fragment reentry cancels pending submission and does not let stale completion overwrite new token (18.238033ms)
+✔ new fragment after completed reset reopens a clean form (15.188202ms)
+✔ reset service failure keeps retry form and never shows success (18.965173ms)
+✔ forgot posts only email, omits cookies and prevents caching/referrer/redirects (81.742063ms)
+✔ reset posts token/password and includes cookies to accept server cookie deletion (17.747784ms)
+✔ HTTP 200 rejects invalid success envelope null (12.473123ms)
+✔ HTTP 200 rejects invalid success envelope {} (12.71368ms)
+✔ HTTP 200 rejects invalid success envelope {"success":false,"message":"server says no"} (10.073121ms)
+✔ HTTP 200 rejects invalid success envelope {"success":"true","message":"bad"} (8.695727ms)
+✔ HTTP 200 rejects invalid success envelope {"success":true} (8.74904ms)
+✔ HTTP 200 rejects invalid success envelope {"success":true,"message":12} (8.106547ms)
+✔ malformed JSON cannot produce a successful result or expose response text (9.185957ms)
+✔ 400 requestPasswordRecovery maps to safe error without parsing raw response (11.456016ms)
+✔ 400 resetPassword maps to safe error without parsing raw response (8.148689ms)
+✔ 429 requestPasswordRecovery maps to safe error without parsing raw response (7.060944ms)
+✔ 503 requestPasswordRecovery maps to safe error without parsing raw response (7.53086ms)
+✔ 500 requestPasswordRecovery maps to safe error without parsing raw response (13.064615ms)
+✔ network failure is redacted and never retried (6.75065ms)
+✔ 20 second timeout aborts transport, reports timeout and removes timer/listener (12.37894ms)
+✔ parent abort before request remains AbortError (10.902943ms)
+✔ parent abort during request remains AbortError rather than displaying an error (10.68396ms)
+✔ invalid API base is rejected before fetch (javascript) (11.818165ms)
+✔ invalid API base is rejected before fetch (https) (11.718095ms)
+✔ invalid API base is rejected before fetch (https) (12.155949ms)
+✔ invalid API base is rejected before fetch (https) (11.647069ms)
+✔ invalid API base is rejected before fetch (not a URL) (11.05815ms)
+ℹ tests 32
+ℹ suites 0
+ℹ pass 32
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 719.851036

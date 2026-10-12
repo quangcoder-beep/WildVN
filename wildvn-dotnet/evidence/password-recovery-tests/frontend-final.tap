@@ -1,0 +1,59 @@
+✔ forgot trims input, blocks duplicate submits and shows success only after API resolves (152.744029ms)
+✔ forgot rejects malformed address without contacting API (40.59228ms)
+✔ reset captures token in memory and removes it from URL before submission (48.599126ms)
+✔ reset validates confirmation and UTF-8 byte limit before contacting API (44.571318ms)
+✔ successful reset remains successful when persisted local auth storage throws (41.595668ms)
+✔ new same-document email fragment replaces old in-memory reset token (46.952546ms)
+✔ fragment reentry cancels pending submission and does not let stale completion overwrite new token (36.348468ms)
+✔ new fragment after completed reset reopens a clean form (43.411656ms)
+✔ reset service failure keeps retry form and never shows success (41.799655ms)
+✔ forgot posts only email, omits cookies and prevents caching/referrer/redirects (163.757339ms)
+✔ reset posts token/password and includes cookies to accept server cookie deletion (27.479522ms)
+✔ HTTP 200 rejects invalid success envelope null (20.616732ms)
+✔ HTTP 200 rejects invalid success envelope {} (19.774414ms)
+✔ HTTP 200 rejects invalid success envelope {"success":false,"message":"server says no"} (19.87556ms)
+✔ HTTP 200 rejects invalid success envelope {"success":"true","message":"bad"} (17.688711ms)
+✔ HTTP 200 rejects invalid success envelope {"success":true} (22.708504ms)
+✔ HTTP 200 rejects invalid success envelope {"success":true,"message":12} (22.661245ms)
+✔ malformed JSON cannot produce a successful result or expose response text (20.351397ms)
+✔ 400 requestPasswordRecovery maps to safe error without parsing raw response (20.831311ms)
+✔ 400 resetPassword maps to safe error without parsing raw response (25.225659ms)
+✔ 429 requestPasswordRecovery maps to safe error without parsing raw response (31.255989ms)
+✔ 503 requestPasswordRecovery maps to safe error without parsing raw response (32.020918ms)
+✔ 500 requestPasswordRecovery maps to safe error without parsing raw response (28.981003ms)
+✔ network failure is redacted and never retried (33.804826ms)
+✔ 20 second timeout aborts transport, reports timeout and removes timer/listener (32.083939ms)
+✔ parent abort before request remains AbortError (33.015886ms)
+✔ parent abort during request remains AbortError rather than displaying an error (45.496147ms)
+✔ invalid API base is rejected before fetch (javascript) (38.622905ms)
+✔ invalid API base is rejected before fetch (https) (30.391648ms)
+✔ invalid API base is rejected before fetch (https) (33.906885ms)
+✔ invalid API base is rejected before fetch (https) (29.589291ms)
+✔ invalid API base is rejected before fetch (not a URL) (21.809461ms)
+ℹ tests 32
+ℹ suites 0
+ℹ pass 32
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1318.690577
+ℹ start of coverage report
+ℹ --------------------------------------------------------------------------
+ℹ file                      | line % | branch % | funcs % | uncovered lines
+ℹ --------------------------------------------------------------------------
+ℹ app                       |        |          |         | 
+ℹ  (auth)                   |        |          |         | 
+ℹ   _services               |        |          |         | 
+ℹ    passwordRecovery.ts    | 100.00 |    97.87 |  100.00 | 
+ℹ   forgot-password         |        |          |         | 
+ℹ    page.tsx               |  91.11 |    86.36 |   75.00 | 45-52
+ℹ   reset-password          |        |          |         | 
+ℹ    page.tsx               |  93.71 |    84.62 |   88.89 | 58-59 126-132
+ℹ scripts                   |        |          |         | 
+ℹ  password-recovery-test   |        |          |         | 
+ℹ   harness.mjs             | 100.00 |    97.30 |   91.67 | 
+ℹ --------------------------------------------------------------------------
+ℹ all files                 |  95.74 |    92.41 |   89.80 | 
+ℹ --------------------------------------------------------------------------
+ℹ end of coverage report

@@ -1,0 +1,14 @@
+--- wildvn_fixture_source
+
++++ wildvn_fixture_roundtrip
+
+@@ -235,7 +235,7 @@
+
+     role character varying(20) NOT NULL,
+     content text NOT NULL,
+     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+-    CONSTRAINT chat_messages_role_check CHECK (((role)::text = ANY ((ARRAY['user'::character varying, 'assistant'::character varying])::text[])))
++    CONSTRAINT chat_messages_role_check CHECK (((role)::text = ANY (ARRAY[('user'::character varying)::text, ('assistant'::character varying)::text])))
+ );
+ 
+ 

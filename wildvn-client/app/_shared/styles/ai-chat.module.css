@@ -1,0 +1,60 @@
+.panel {
+  background: rgba(3, 3, 3, 0.85);
+  backdrop-filter: blur(40px);
+  -webkit-backdrop-filter: blur(40px);
+  border: 1px solid rgba(232, 220, 200, 0.15);
+  box-shadow: 0 -8px 40px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.05);
+}
+
+.inputGlass {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(232, 220, 200, 0.06);
+  transition: all 0.2s ease;
+}
+
+.inputGlass:focus-within {
+  border-color: rgba(200, 64, 26, 0.5);
+  box-shadow: 0 0 20px rgba(200, 64, 26, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.fab {
+  background: rgba(255, 255, 255, 0.02);
+  background-blend-mode: luminosity;
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  border: 1px solid rgba(232, 220, 200, 0.15);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3), inset 0 1px 1px rgba(255,255,255,0.15);
+}
+
+.thinkOrb {
+  background: linear-gradient(135deg, #2DD4A8, #0EA5E9, #8B5CF6);
+  background-size: 200% 200%;
+  animation: thinkGradient 2s ease infinite, thinkPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes thinkGradient {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes thinkPulse {
+  0%, 100% { transform: scale(0.9); opacity: 0.8; }
+  50% { transform: scale(1.1); opacity: 1; }
+}
+
+.cursor {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  background-color: #C8401A;
+  margin-left: 2px;
+  vertical-align: middle;
+  animation: blink 1s step-end infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}

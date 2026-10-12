@@ -1,0 +1,63 @@
+# Credentials and local configuration
+.env
+.env.*
+!.env.example
+!*.env.example
+docker-compose.env
+client_secret*.json
+*.key
+*.pem
+*.pfx
+*.p12
+.aws/
+.codex/
+.claude/
+.agents/
+# Dependencies and generated files
+node_modules/
+.next/
+.venv/
+venv/
+__pycache__/
+*.pyc
+.gradle/
+**/bin/
+**/obj/
+TestResults/
+test-results/
+playwright-report/
+coverage/
+*.log
+*.log.*
+*.tsbuildinfo
+.playwright/
+# Workstation settings
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+# Crawler runtime data
+crawl4ai-project/output/
+crawl4ai-project/json_output/
+crawl4ai-project/json_output_ai/
+crawl4ai-project/processed/
+# Local standalone Docker Compose executable
+/docker-compose
+# Generated diagnostic artifacts
+wildvn-client/seed_output.txt
+wildvn-dotnet/evidence/**/*.xml
+wildvn-dotnet/evidence/**/*.trx
+wildvn-dotnet/evidence/**/http-probe.txt
+wildvn-dotnet/evidence/**/*.txt
+wildvn-dotnet/evidence/**/*.json
+wildvn-dotnet/evidence/**/*.csv
+wildvn-dotnet/evidence/**/*.html
+# Local diagnostic screenshots and binary reports
+wildvn-dotnet/evidence/**/*.png
+wildvn-dotnet/evidence/**/*.jpg
+wildvn-dotnet/evidence/**/*.jpeg
+wildvn-dotnet/evidence/**/*.webm
+wildvn-dotnet/evidence/**/*.zip
+wildvn-dotnet/evidence/**/*.dll
+wildvn-dotnet/evidence/**/*.exe
+wildvn-dotnet/evidence/**/*.pdb

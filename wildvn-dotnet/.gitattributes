@@ -1,0 +1,22 @@
+# Exact upstream Flyway source copy: preserve existing trailing spaces/newline.
+tests/Fixtures/schema.sql whitespace=-blank-at-eol,-blank-at-eof
+
+# Exact captured output: retain CRLF and diff context, including Windows checkout.
+/evidence/handover-red.txt -text -whitespace
+/evidence/handover-green.txt -text -whitespace
+/evidence/p0-rerun/** -text -whitespace
+
+# Preserve WF01 evidence hashes; captured Mono/X11 output includes intentional whitespace.
+/evidence/winforms-wf01/* -text
+/evidence/winforms-wf01/*.txt -whitespace
+
+# Exact WF02 runtime output; keep captured whitespace/bytes, not source suppressions.
+/evidence/winforms-wf02/** -text
+/evidence/winforms-wf02/*.txt -whitespace
+/evidence/winforms-wf02/*.xml -whitespace
+
+# Exact WF03 command/runtime evidence; preserve captured bytes, including failures.
+/evidence/winforms-wf03/** -text
+/evidence/winforms-wf03/*.txt -whitespace
+/evidence/winforms-wf03/*.xml -whitespace
+/evidence/winforms-wf03/completion-smoke/*.txt -whitespace

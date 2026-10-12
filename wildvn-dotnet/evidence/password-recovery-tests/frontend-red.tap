@@ -1,0 +1,76 @@
+✔ forgot trims input, blocks duplicate submits and shows success only after API resolves (111.41702ms)
+✔ forgot rejects malformed address without contacting API (23.296479ms)
+✔ reset captures token in memory and removes it from URL before submission (33.8179ms)
+✔ reset validates confirmation and UTF-8 byte limit before contacting API (26.419542ms)
+✖ successful reset remains successful when persisted local auth storage throws (17.705156ms)
+✖ new same-document email fragment replaces old in-memory reset token (18.677375ms)
+✔ forgot posts only email, omits cookies and prevents caching/referrer/redirects (83.121607ms)
+✔ reset posts token/password and includes cookies to accept server cookie deletion (17.157679ms)
+✔ HTTP 200 rejects invalid success envelope null (14.674303ms)
+✔ HTTP 200 rejects invalid success envelope {} (12.262572ms)
+✔ HTTP 200 rejects invalid success envelope {"success":false,"message":"server says no"} (8.845691ms)
+✔ HTTP 200 rejects invalid success envelope {"success":"true","message":"bad"} (8.389008ms)
+✔ HTTP 200 rejects invalid success envelope {"success":true} (8.915231ms)
+✔ HTTP 200 rejects invalid success envelope {"success":true,"message":12} (8.309367ms)
+✔ malformed JSON cannot produce a successful result or expose response text (8.838064ms)
+✔ 400 requestPasswordRecovery maps to safe error without parsing raw response (10.020776ms)
+✔ 400 resetPassword maps to safe error without parsing raw response (7.720324ms)
+✔ 429 requestPasswordRecovery maps to safe error without parsing raw response (6.990603ms)
+✔ 503 requestPasswordRecovery maps to safe error without parsing raw response (8.098153ms)
+✔ 500 requestPasswordRecovery maps to safe error without parsing raw response (11.815711ms)
+✔ network failure is redacted and never retried (6.304586ms)
+✔ 20 second timeout aborts transport, reports timeout and removes timer/listener (6.723032ms)
+✔ parent abort before request remains AbortError (9.019244ms)
+✔ parent abort during request remains AbortError rather than displaying an error (7.193489ms)
+✔ invalid API base is rejected before fetch (javascript) (10.068897ms)
+✔ invalid API base is rejected before fetch (https) (7.024425ms)
+✔ invalid API base is rejected before fetch (https) (6.732169ms)
+✔ invalid API base is rejected before fetch (https) (8.15778ms)
+✔ invalid API base is rejected before fetch (not a URL) (7.20466ms)
+ℹ tests 29
+ℹ suites 0
+ℹ pass 27
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 666.255632
+
+✖ failing tests:
+
+test at scripts/password-recovery-pages.test.mjs:77:1
+✖ successful reset remains successful when persisted local auth storage throws (17.705156ms)
+  AssertionError [ERR_ASSERTION]: Server reset is complete even if local storage cannot persist
+      at TestContext.<anonymous> (file:///home/laivinhquang/Workspace/project/wildVN/wildvn-client/scripts/password-recovery-pages.test.mjs:89:10)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: null,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at scripts/password-recovery-pages.test.mjs:94:1
+✖ new same-document email fragment replaces old in-memory reset token (18.677375ms)
+  AssertionError [ERR_ASSERTION]: Every new token fragment must be cleared from the URL
+  + actual - expected
+  
+  + '#token=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb'
+  - ''
+  
+      at TestContext.<anonymous> (file:///home/laivinhquang/Workspace/project/wildVN/wildvn-client/scripts/password-recovery-pages.test.mjs:100:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: '#token=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+    expected: '',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

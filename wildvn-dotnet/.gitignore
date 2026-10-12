@@ -1,0 +1,11 @@
+**/bin/
+**/obj/
+**/TestResults/
+**/__pycache__/
+*.user
+.env*
+client_secret*.json
+*.pfx
+*.p12
+
+**/.coverage*

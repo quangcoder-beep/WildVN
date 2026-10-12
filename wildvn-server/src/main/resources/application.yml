@@ -1,0 +1,66 @@
+spring:
+  config:
+    import: optional:file:.env[.properties]
+  application:
+    name: wildvn
+  elasticsearch:
+    uris: ${ELASTICSEARCH_URL:http://localhost:9200}
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+  kafka:
+    bootstrap-servers: ${KAFKA_BROKERS:localhost:9092}
+  datasource:
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+  flyway:
+    table: spring_flyway_schema_history
+    baseline-on-migrate: true
+    baseline-version: 1
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  autoconfigure:
+    exclude:
+      - org.springframework.ai.vectorstore.pgvector.autoconfigure.PgVectorStoreAutoConfiguration
+
+wildvn:
+  chat:
+    # auto keeps the PostgreSQL provider active without a paid API key and
+    # switches to Anthropic as soon as a non-empty key is supplied.
+    provider: ${CHAT_PROVIDER:auto}
+    anthropic-api-key: ${ANTHROPIC_API_KEY:}
+    anthropic-model: ${ANTHROPIC_MODEL:claude-3-5-haiku-latest}
+    anthropic-endpoint: ${ANTHROPIC_ENDPOINT:https://api.anthropic.com}
+    max-message-chars: ${CHAT_MAX_MESSAGE_CHARS:4000}
+    max-messages: ${CHAT_MAX_MESSAGES:20}
+    # Product policy: chat history expires five days after the last activity.
+    retention-days: 5
+    cleanup-cron: ${CHAT_CLEANUP_CRON:0 0 * * * *}
+  security:
+    jwt-secret: ${JWT_SECRET:}
+    csrf-enabled: ${CSRF_ENABLED:true}
+    cookie-secure: ${AUTH_COOKIE_SECURE:false}
+    cookie-same-site: ${AUTH_COOKIE_SAME_SITE:Lax}
+  minio:
+    enabled: ${MINIO_ENABLED:false}
+    endpoint: ${MINIO_ENDPOINT:}
+    access-key: ${MINIO_ACCESS_KEY:}
+    secret-key: ${MINIO_SECRET_KEY:}
+    bucket: ${MINIO_BUCKET:wildvn}
+    presigned-url-ttl-seconds: ${MINIO_PRESIGNED_URL_TTL_SECONDS:900}
+  ml-service:
+    url: ${ML_SERVICE_URL:http://localhost:8000}
+  qdrant:
+    url: ${QDRANT_URL:http://localhost:6333}
+    collection: ${QDRANT_COLLECTION:species_embeddings}
+
+server:
+  port: ${SERVER_PORT:8081}

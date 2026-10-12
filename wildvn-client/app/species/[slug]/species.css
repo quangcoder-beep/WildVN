@@ -1,0 +1,951 @@
+/* =========================================
+   WILDVN: SPECIES DETAIL — LUXURY EDITORIAL BRUTALISM
+   Aesthetic: Museum Spotlight × Horizontal Kino × Bento Terminal
+========================================= */
+
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400;1,600&family=Figtree:wght@400;600;800;900&family=DM+Mono:wght@400;500&display=swap');
+
+/* --- DESIGN TOKENS --- */
+:root {
+  --abyss:        #030303;
+  --abyss-mid:    #0a0a0a;
+  --parchment:    #E8DCC8;
+  --parchment-dim:#9A8F7E;
+  --oxide:        #C8401A;
+  --oxide-dim:    rgba(200, 64, 26, 0.3);
+  --moss:         #3A5C3A;
+  --wire:         rgba(232, 220, 200, 0.06);
+  --wire-strong:  rgba(232, 220, 200, 0.15);
+
+  --font-display: 'Cormorant Garamond', Georgia, serif;
+  --font-heading: 'Figtree', system-ui, sans-serif;
+  --font-mono:    'DM Mono', 'Courier New', monospace;
+}
+
+/* --- RESET & BASE --- */
+.species-layout, .species-layout *, .species-layout *::before, .species-layout *::after { box-sizing: border-box; }
+
+/* --- 3-LAYER ARCHITECTURE --- */
+
+/* Layer 0: Ambient Canvas */
+.species-bg-canvas {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.species-bg-radial {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 60% 50% at 50% 20%, rgba(232,220,200,0.04) 0%, transparent 70%);
+}
+
+/* Grain texture overlay */
+.species-bg-grain {
+  position: absolute;
+  inset: 0;
+  opacity: 0.025;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  background-size: 128px 128px;
+  mix-blend-mode: overlay;
+}
+
+/* Layer 1: Main Content */
+.species-layout {
+  position: relative;
+  z-index: 1;
+  background: transparent;
+  color: var(--parchment);
+  font-family: var(--font-heading);
+  overflow-x: hidden;
+}
+
+/* Layer 2: Fixed UI overlay */
+.species-ui-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  pointer-events: none;
+}
+
+/* =========================================
+   CHAPTER 1: THE MUSEUM SPOTLIGHT
+========================================= */
+
+.chapter-museum {
+  position: relative;
+  height: 100vh;
+  width: 100%;
+  background: var(--abyss);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  /* Codegrid: GPU layer promotion */
+  will-change: transform;
+}
+
+/* Spotlight cone from above */
+.museum-spotlight {
+  position: absolute;
+  top: -30vh;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 55vw;
+  height: 90vh;
+  background: conic-gradient(
+    from 180deg at 50% 0%,
+    transparent 30%,
+    rgba(240, 235, 220, 0.09) 45%,
+    rgba(240, 235, 220, 0.14) 50%,
+    rgba(240, 235, 220, 0.09) 55%,
+    transparent 70%
+  );
+  filter: blur(30px);
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* Floor glow */
+.museum-floor {
+  position: absolute;
+  bottom: -2vh;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60vw;
+  height: 20vh;
+  background: radial-gradient(ellipse at center, rgba(232,220,200,0.06) 0%, transparent 70%);
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* --- ANIMAL WRAPPER --- */
+.museum-animal-wrapper {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  max-width: 680px;
+  height: 80vh;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  z-index: 3;
+  /* Codegrid: GPU for transform animations */
+  will-change: transform;
+}
+
+.museum-animal-img {
+  max-height: 100%;
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
+  transform-origin: center bottom;
+  /* Radial mask to blend black background */
+  mask-image: radial-gradient(ellipse 82% 85% at center 55%, black 45%, transparent 100%);
+  -webkit-mask-image: radial-gradient(ellipse 82% 85% at center 55%, black 45%, transparent 100%);
+  filter: drop-shadow(0 -4px 40px rgba(232,220,200,0.05));
+  /* Codegrid: will-change for smooth mouse parallax */
+  will-change: transform, filter;
+}
+
+/* Breathing animation — subtle, 6s */
+.breath-anim {
+  animation: creatureBreath 6s ease-in-out infinite;
+}
+
+@keyframes creatureBreath {
+  0%, 100% { transform: scaleY(1) scaleX(1); }
+  50%       { transform: scaleY(1.012) scaleX(0.997); }
+}
+
+/* --- TYPOGRAPHY --- */
+.museum-typography {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding-top: 18vh;
+  z-index: 2;
+  pointer-events: none;
+  text-align: center;
+}
+
+/* Scientific name — Cormorant Garamond Italic */
+.museum-scientific-mask {
+  overflow: hidden; /* The mask for y:110% reveal */
+  padding-bottom: 0.1em;
+}
+
+.museum-scientific {
+  display: block;
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: clamp(18px, 2vw, 28px);
+  font-weight: 400;
+  color: var(--parchment-dim);
+  letter-spacing: 0.08em;
+  will-change: transform;
+}
+
+/* Name — Figtree 900, massive */
+.museum-name {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0 0.2em;
+  font-family: var(--font-heading);
+  font-size: clamp(64px, 11vw, 160px);
+  font-weight: 900;
+  line-height: 0.88;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+  color: var(--parchment);
+  margin-top: 0.1em;
+}
+
+.museum-name-mask {
+  overflow: hidden; /* Per-word mask */
+  padding-bottom: 0.05em;
+}
+
+.museum-name-word {
+  display: inline-block;
+  will-change: transform;
+}
+
+/* Status badge */
+.museum-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 20px;
+  padding: 6px 14px;
+  border: 1px solid var(--oxide-dim);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--oxide);
+  will-change: transform, opacity;
+}
+
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--oxide);
+  flex-shrink: 0;
+}
+
+.pulse-oxide {
+  animation: oxPulse 2.4s infinite;
+}
+
+@keyframes oxPulse {
+  0%   { box-shadow: 0 0 0 0 rgba(200,64,26,0.8); }
+  70%  { box-shadow: 0 0 0 8px rgba(200,64,26,0); }
+  100% { box-shadow: 0 0 0 0 rgba(200,64,26,0); }
+}
+
+/* --- SPECIMEN TAG (top-right) --- */
+.specimen-tag {
+  position: absolute;
+  top: 5vh;
+  right: 4vw;
+  z-index: 10;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--parchment-dim);
+  border: 1px solid var(--wire-strong);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: rgba(3,3,3,0.5);
+  backdrop-filter: blur(8px);
+  min-width: 180px;
+}
+
+.specimen-tag__divider {
+  height: 1px;
+  background: var(--wire-strong);
+  margin: 2px 0;
+}
+
+.specimen-tag__line {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.specimen-tag__key {
+  color: var(--parchment-dim);
+  opacity: 0.6;
+}
+
+.specimen-tag__val {
+  color: var(--parchment);
+  letter-spacing: 0.05em;
+}
+
+.specimen-tag__val--alert {
+  color: var(--oxide);
+}
+
+/* --- SCROLL CUE --- */
+.museum-scroll-cue {
+  position: absolute;
+  bottom: 4vh;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  z-index: 10;
+}
+
+.scroll-cue-text {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.3em;
+  color: var(--parchment-dim);
+  opacity: 0.5;
+}
+
+.scroll-cue-line {
+  width: 1px;
+  height: 44px;
+  background: var(--wire-strong);
+  position: relative;
+  overflow: hidden;
+}
+
+.scroll-cue-dot {
+  position: absolute;
+  top: 0;
+  left: -1px;
+  width: 3px;
+  height: 10px;
+  background: var(--oxide);
+  border-radius: 2px;
+  animation: scrollDot 2s ease-in-out infinite;
+}
+
+@keyframes scrollDot {
+  0%   { top: -10px; opacity: 0; }
+  30%  { opacity: 1; }
+  100% { top: 44px; opacity: 0; }
+}
+
+/* --- BACK BUTTON (Layer 2 overlay) --- */
+.back-btn {
+  position: absolute;
+  top: 4vh;
+  left: 3vw;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  color: var(--parchment-dim);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  pointer-events: all;
+  transition: color 0.3s ease;
+  z-index: 100;
+}
+
+.back-btn:hover {
+  color: var(--parchment);
+}
+
+.back-btn__arrow {
+  font-size: 14px;
+  transition: transform 0.3s ease;
+}
+
+.back-btn:hover .back-btn__arrow {
+  transform: translateX(-3px);
+}
+
+/* =========================================
+   CHAPTER 2: THE HORIZONTAL JOURNEY
+========================================= */
+
+.chapter-journey {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  background: var(--abyss-mid);
+  overflow: hidden;
+  border-top: 1px solid var(--wire);
+  border-bottom: 1px solid var(--wire);
+  will-change: transform;
+}
+
+.journey-track {
+  display: flex;
+  height: 100vh;
+  width: max-content; /* Track width matches content */
+  will-change: transform;
+}
+
+.journey-slide {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 10vw;
+  flex-shrink: 0;
+  isolation: isolate;
+}
+
+/* Slide 1: Habitat */
+.slide-habitat .slide-bg {
+  position: absolute;
+  inset: 0;
+  background-image: url('/backgrounds/jungle-dark.jpg'); /* Need a placeholder or real image */
+  background-size: cover;
+  background-position: center;
+  opacity: 0.15;
+  z-index: 0;
+}
+
+.slide-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-width: 600px;
+  margin-right: auto;
+}
+
+.slide-content--wide {
+  width: 100%;
+  max-width: 1100px;
+}
+
+.slide-content--column {
+  padding: 0 2rem 0 0;
+}
+
+.slide-heading {
+  font-family: var(--font-display);
+  font-size: clamp(40px, 6vw, 80px);
+  font-weight: 600;
+  color: var(--parchment);
+  line-height: 1.1;
+}
+
+.slide-subheading {
+  margin: 0 0 12px;
+  color: var(--parchment);
+  font-family: var(--font-heading);
+  font-size: clamp(18px, 2vw, 24px);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.slide-number {
+  font-family: var(--font-mono);
+  font-size: 14vw;
+  font-weight: 500;
+  color: var(--wire-strong);
+  position: absolute;
+  right: 5vw;
+  bottom: 5vh;
+  line-height: 0.8;
+  z-index: 0;
+}
+
+.slide-text {
+  font-family: var(--font-heading);
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--parchment-dim);
+}
+
+.slide-text--compact {
+  font-size: 1rem;
+  line-height: 1.7;
+}
+
+.slide-heading--dark {
+  color: var(--abyss);
+}
+
+.slide-text--dark {
+  color: rgba(3, 3, 3, 0.72);
+}
+
+/* Slide 2: Diet / Biology Split Layout */
+.slide-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  width: 100%;
+  height: 100%;
+  gap: 10vw;
+  align-items: center;
+}
+
+.slide-split--conservation {
+  min-height: 260px;
+  gap: clamp(3rem, 10vw, 9rem);
+}
+
+.biology-list {
+  list-style: none;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  color: var(--parchment-dim);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.biology-list li {
+  display: flex;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--wire-strong);
+  padding-bottom: 10px;
+}
+
+.biology-list span {
+  color: var(--parchment);
+}
+
+/* Slide 4: CTA */
+.slide-cta {
+  background: var(--moss);
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+
+.slide-cta__content {
+  align-items: center;
+  margin: 0;
+  text-align: center;
+}
+
+.btn-brutalist {
+  margin-top: 40px;
+  padding: 16px 32px;
+  background: transparent;
+  color: var(--parchment);
+  border: 1px solid var(--parchment);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-brutalist:hover {
+  background: var(--parchment);
+  color: var(--moss);
+}
+
+.btn-brutalist--dark {
+  border-color: var(--abyss);
+  color: var(--abyss);
+}
+
+.btn-brutalist--dark:hover {
+  background: var(--abyss);
+  color: var(--parchment);
+}
+
+/* =========================================
+   CHAPTER 3: THE BENTO TERMINAL
+========================================= */
+
+.chapter-bento {
+  position: relative;
+  min-height: 100vh;
+  background: var(--abyss);
+  padding: 10vh 5vw;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.bento-header {
+  text-align: center;
+  margin-bottom: 6vh;
+}
+
+.bento-header h2 {
+  font-family: var(--font-display);
+  font-size: clamp(32px, 4vw, 56px);
+  color: var(--parchment);
+  font-weight: 600;
+  font-family: var(--font-heading);
+  font-size: clamp(28px, 4vw, 52px);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  text-transform: uppercase;
+}
+
+.bento-header p {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--parchment-dim);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  margin-top: 8px;
+}
+
+/* --- THE GRID --- */
+.bento-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-auto-rows: minmax(180px, auto);
+  gap: 16px;
+  width: 100%;
+  max-width: 1200px;
+}
+
+/* Grid Cell Sizes */
+.bento-col-span-2 { grid-column: span 2; }
+.bento-col-span-4 { grid-column: span 4; }
+.bento-row-span-2 { grid-row: span 2; }
+
+@media (max-width: 1024px) {
+  .bento-grid { grid-template-columns: repeat(2, 1fr); }
+  .bento-col-span-2, .bento-col-span-4 { grid-column: span 2; }
+}
+
+@media (max-width: 600px) {
+  .bento-grid { grid-template-columns: 1fr; }
+  .bento-col-span-2, .bento-col-span-4 { grid-column: span 1; }
+}
+
+/* --- BENTO CARD (Electric Hover) --- */
+.bento-card {
+  position: relative;
+  background: var(--abyss-mid);
+  border: 1px solid var(--wire);
+  padding: clamp(20px, 2.4vw, 30px);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+              background 0.4s ease;
+  overflow: hidden;
+  min-height: 180px;
+}
+
+/* The label at the top of each card */
+.bento-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  color: var(--parchment-dim);
+  text-transform: uppercase;
+  margin-bottom: 20px;
+}
+
+/* The Electric Border Pseudo-element */
+.bento-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 1px solid transparent;
+  background: linear-gradient(90deg, transparent, var(--oxide), transparent) border-box;
+  -webkit-mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  background-size: 200% 100%;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.bento-card:hover {
+  transform: translateY(-4px);
+  background: rgba(10, 10, 10, 0.8);
+}
+
+.bento-card:hover::before {
+  opacity: 1;
+  animation: electricBorder 2s linear infinite;
+}
+
+@keyframes electricBorder {
+  0% { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+
+/* --- CARD SPECIFICS --- */
+.card-value {
+  font-family: var(--font-heading);
+  font-size: 40px;
+  font-weight: 800;
+  color: var(--parchment);
+  line-height: 1;
+}
+
+.location-list {
+  display: grid;
+  gap: 12px;
+  min-height: 300px;
+  align-content: start;
+}
+
+.location-item {
+  display: grid;
+  gap: 5px;
+  padding: 14px;
+  border: 1px solid var(--wire-strong);
+  background: rgba(232, 220, 200, 0.025);
+  color: var(--parchment-dim);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.location-item__heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.location-item__name {
+  color: var(--parchment);
+  font-family: var(--font-heading);
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.location-item__type,
+.data-empty-state__code,
+.status-overview__note {
+  color: var(--oxide);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.location-item p {
+  margin: 4px 0 0;
+  color: var(--parchment-dim);
+  font-family: var(--font-heading);
+  font-size: 13px;
+}
+
+.data-empty-state {
+  display: grid;
+  min-height: 300px;
+  align-content: center;
+  gap: 10px;
+  color: var(--parchment-dim);
+  font-family: var(--font-mono);
+}
+
+.data-empty-state strong {
+  color: var(--parchment);
+  font-family: var(--font-heading);
+  font-size: clamp(20px, 2.2vw, 28px);
+  line-height: 1.1;
+}
+
+.data-empty-state p {
+  max-width: 32rem;
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.taxonomy-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--parchment);
+}
+
+.taxonomy-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.taxonomy-item--current {
+  color: var(--oxide);
+}
+
+.taxonomy-item--meta {
+  color: var(--parchment-dim);
+  opacity: 0.75;
+}
+
+.data-inline-empty {
+  color: var(--parchment-dim);
+}
+
+.taxonomy-arrow {
+  color: var(--wire-strong);
+}
+
+/* --- STATUS SUMMARY --- */
+.status-overview {
+  display: grid;
+  align-content: center;
+  gap: 8px;
+  min-height: 140px;
+}
+
+.status-overview__code {
+  color: var(--oxide);
+  font-family: var(--font-heading);
+  font-size: clamp(42px, 5vw, 64px);
+  font-weight: 900;
+  letter-spacing: -0.06em;
+  line-height: 0.9;
+}
+
+.status-overview__label {
+  color: var(--parchment);
+  font-family: var(--font-heading);
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.status-overview p {
+  max-width: 26rem;
+  margin: 0;
+  color: var(--parchment-dim);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.status-overview--pending .status-overview__code {
+  color: var(--parchment-dim);
+}
+
+.status-overview__note {
+  margin-top: 4px;
+}
+
+@media (max-width: 768px) {
+  .chapter-museum {
+    min-height: 100svh;
+    height: 100svh;
+  }
+
+  .museum-typography {
+    padding: 20svh 6vw 0;
+  }
+
+  .museum-name {
+    font-size: clamp(48px, 15vw, 92px);
+  }
+
+  .museum-animal-wrapper {
+    height: 66svh;
+  }
+
+  .specimen-tag {
+    top: 3vh;
+    right: 4vw;
+    min-width: 150px;
+    padding: 10px;
+    font-size: 9px;
+  }
+
+  .back-btn {
+    top: 3vh;
+    left: 4vw;
+  }
+
+  .journey-slide {
+    min-height: 100svh;
+    height: auto;
+    padding: 12svh 7vw;
+  }
+
+  .slide-split,
+  .slide-split--conservation {
+    grid-template-columns: 1fr;
+    gap: 2.5rem;
+    height: auto;
+  }
+
+  .slide-content--column {
+    padding-right: 0;
+  }
+
+  .slide-number {
+    right: 7vw;
+    bottom: 3vh;
+    font-size: 24vw;
+  }
+
+  .chapter-bento {
+    padding: 12vh 5vw;
+  }
+
+  .bento-grid {
+    gap: 12px;
+  }
+
+  .bento-card {
+    min-height: 160px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .chapter-journey {
+    height: auto;
+    overflow: visible;
+  }
+
+  .journey-track {
+    width: 100%;
+    display: grid;
+  }
+
+  .journey-slide {
+    width: 100%;
+  }
+}
+
+/* Loading screen */
+.loading-screen {
+  background: var(--abyss);
+  color: var(--parchment-dim);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.2em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  width: 100vw;
+}

@@ -1,0 +1,411 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  extensions = [pg_trgm, postgis, uuid_ossp(map: "uuid-ossp"), vector]
+}
+
+/// Hệ thống phân loại sinh học (Giới → Ngành → Lớp → Bộ → Họ → Chi)
+model Taxonomy {
+  id             String       @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  parentId       String?      @map("parent_id") @db.Uuid
+  rank           TaxonomyRank
+  scientificName String       @map("scientific_name") @db.VarChar(255)
+  nameVn         String?      @map("name_vn") @db.VarChar(255)
+  createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt      DateTime?    @map("deleted_at") @db.Timestamptz(6)
+  species        Species[]
+  parent         Taxonomy?    @relation("TaxonomyTree", fields: [parentId], references: [id], onDelete: Restrict)
+  children       Taxonomy[]   @relation("TaxonomyTree")
+
+  @@unique([parentId, scientificName, rank], map: "idx_taxonomy_unique_node")
+  @@index([parentId], map: "idx_taxonomy_parent_id")
+  @@map("taxonomy")
+}
+
+/// Loài sinh vật
+model Species {
+  id                  String                 @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  taxonomyId          String                 @map("taxonomy_id") @db.Uuid
+  slug                String                 @unique @db.VarChar(255)
+  scientificName      String                 @unique @map("scientific_name") @db.VarChar(255)
+  nameVn              String                 @map("name_vn") @db.VarChar(255)
+  nameEn              String?                @map("name_en") @db.VarChar(255)
+  authorCitation      String?                @map("author_citation") @db.VarChar(255)
+  synonyms            String[]               @default([])
+  identificationDesc  String?                @map("identification_desc")
+  biologyDesc         String?                @map("biology_desc")
+  threatsDesc         String?                @map("threats_desc")
+  conservationDesc    String?                @map("conservation_desc")
+  dietType            DietType?              @map("diet_type")
+  habitatType         HabitatType[]          @default([]) @map("habitat_type")
+  activityPattern     ActivityPattern?       @map("activity_pattern")
+  conservationStatus  String                 @map("conservation_status") @db.VarChar(255)
+  vnRedListStatus     VnRedListStatus?       @map("vn_redlist_status")
+  citesAppendix       CitesAppendix?         @default(NONE) @map("cites_appendix")
+  vnDecreeStatus      VnDecreeStatus?        @default(NONE) @map("vn_decree_status")
+  publishStatus       PublishStatus          @default(DRAFT) @map("publish_status")
+  sourceReferences    Json?                  @default("[]") @map("source_references")
+  embeddingVector     Unsupported("vector")? @map("embedding_vector")
+  createdAt           DateTime               @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime               @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt           DateTime?              @map("deleted_at") @db.Timestamptz(6)
+  isFeatured          Boolean                @default(false) @map("is_featured")
+  category            String?                @db.VarChar(255)
+  description         String?
+  diet                String?
+  funFacts            String?                @map("fun_facts")
+  galleryUrls         String?                @map("gallery_urls")
+  habitat             String?                @db.VarChar(255)
+  lessonIds           String?                @map("lesson_ids") @db.VarChar(255)
+  relatedSpeciesIds   String?                @map("related_species_ids") @db.VarChar(255)
+  tags                String?                @db.VarChar(255)
+  thumbnailUrl        String?                @map("thumbnail_url") @db.VarChar(255)
+  ecosystemId         String?                @map("ecosystem_id") @db.Uuid
+  conservationHistory ConservationHistory[]
+  ecosystems          ecosystems?            @relation(fields: [ecosystemId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fkl2wcr1y3e9nv780y9x8st1who")
+  taxonomy            Taxonomy               @relation(fields: [taxonomyId], references: [id])
+  locations           SpeciesLocation[]
+  media               SpeciesMedia[]
+  favorites           UserFavorite[]
+
+  @@index([taxonomyId, conservationStatus], map: "idx_species_taxonomy_status")
+  @@index([createdAt(sort: Desc)], map: "idx_species_created_at_desc")
+  @@map("species")
+}
+
+/// Hình ảnh / video / audio của loài
+model SpeciesMedia {
+  id        String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  speciesId String    @map("species_id") @db.Uuid
+  type      MediaType
+  url       String
+  caption   String?
+  isPrimary Boolean   @default(false) @map("is_primary")
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+  species   Species   @relation(fields: [speciesId], references: [id], onDelete: Cascade)
+
+  @@index([speciesId], map: "idx_species_media_species_id")
+  @@map("species_media")
+}
+
+/// Địa điểm (Tỉnh / Vùng sinh thái / Vườn quốc gia)
+model Location {
+  id                  String            @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  name                String            @db.VarChar(255)
+  type                LocationType
+  latitude            Float?
+  longitude           Float?
+  createdAt           DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt           DateTime?         @map("deleted_at") @db.Timestamptz(6)
+  climate             String?           @db.VarChar(255)
+  description         String?
+  galleryUrls         Json?             @default("[]") @map("gallery_urls")
+  locationDescription String?           @map("location_description")
+  region              String?           @db.VarChar(255)
+  slug                String            @unique @db.VarChar(255)
+  threats             String?
+  thumbnailUrl        String?           @map("thumbnail_url")
+  species             SpeciesLocation[]
+
+  @@map("locations")
+}
+
+/// Bảng trung gian: Loài ↔ Địa điểm (nhiều-nhiều)
+model SpeciesLocation {
+  speciesId        String           @map("species_id") @db.Uuid
+  locationId       String           @map("location_id") @db.Uuid
+  distributionType DistributionType @default(NATIVE) @map("distribution_type")
+  createdAt        DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  location         Location         @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  species          Species          @relation(fields: [speciesId], references: [id], onDelete: Cascade)
+
+  @@id([speciesId, locationId])
+  @@index([locationId, speciesId], map: "idx_species_locations_lookup")
+  @@map("species_locations")
+}
+
+/// Lịch sử thay đổi tình trạng bảo tồn
+model ConservationHistory {
+  id        String              @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  speciesId String              @map("species_id") @db.Uuid
+  oldStatus ConservationStatus? @map("old_status")
+  newStatus ConservationStatus  @map("new_status")
+  changedAt DateTime            @map("changed_at") @db.Date
+  source    String
+  notes     String?
+  createdAt DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  species   Species             @relation(fields: [speciesId], references: [id], onDelete: Cascade)
+
+  @@index([speciesId, changedAt(sort: Desc)], map: "idx_conservation_history_species")
+  @@map("conservation_history")
+}
+
+/// Yêu thích (User Bookmark)
+model UserFavorite {
+  userId    String   @map("user_id") @db.VarChar(255)
+  speciesId String   @map("species_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  species   Species  @relation(fields: [speciesId], references: [id], onDelete: Cascade)
+
+  @@id([userId, speciesId])
+  @@index([userId], map: "idx_user_favorites_user_id")
+  @@map("user_favorites")
+}
+
+/// Tiến trình học tập của người dùng (Góc học tập)
+model AcademyProgress {
+  userId          String   @id @map("user_id") @db.VarChar(255)
+  rpPoints        Int      @default(0) @map("rp_points")
+  streakDays      Int      @default(0) @map("streak_days")
+  unlockedSpecies Json     @default("[]") @map("unlocked_species")
+  lastActiveDate  DateTime @default(now()) @map("last_active_date") @db.Timestamptz(6)
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("academy_progress")
+}
+
+model ecosystems {
+  id                   String    @id @db.Uuid
+  climate              String?   @db.VarChar(255)
+  created_at           DateTime  @db.Timestamptz(6)
+  description          String?
+  gallery_urls         String?
+  location_description String?
+  name                 String    @db.VarChar(255)
+  region               String?   @db.VarChar(255)
+  slug                 String    @unique(map: "ukhqo7la1bivehcr6mmwrr1mbat") @db.VarChar(255)
+  species_count        Int
+  threats              String?
+  thumbnail_url        String?   @db.VarChar(255)
+  updated_at           DateTime  @db.Timestamptz(6)
+  species              Species[]
+}
+
+model flyway_schema_history {
+  installed_rank Int      @id(map: "flyway_schema_history_pk")
+  version        String?  @db.VarChar(50)
+  description    String   @db.VarChar(200)
+  type           String   @db.VarChar(20)
+  script         String   @db.VarChar(1000)
+  checksum       Int?
+  installed_by   String   @db.VarChar(100)
+  installed_on   DateTime @default(now()) @db.Timestamp(6)
+  execution_time Int
+  success        Boolean
+
+  @@index([success], map: "flyway_schema_history_s_idx")
+}
+
+model ranks {
+  id         String   @id @db.Uuid
+  created_at DateTime @db.Timestamptz(6)
+  icon_url   String?  @db.VarChar(255)
+  max_xp     Int?
+  min_xp     Int
+  name       String   @unique(map: "ukpiy81b80jgcxgq7uop71l4k47") @db.VarChar(255)
+  name_vn    String   @db.VarChar(255)
+  slug       String   @unique(map: "uk728al8emp3sui0msfjnxt5aiv") @db.VarChar(255)
+  sort_order Int      @unique(map: "uk9q21t85bh3tw86te3xbp2cfu9") @db.SmallInt
+}
+
+model search_suggestions_popularity {
+  query        String   @id @db.VarChar(500)
+  click_count  BigInt?
+  search_count BigInt?
+  updated_at   DateTime @db.Timestamptz(6)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model spatial_ref_sys {
+  srid      Int     @id
+  auth_name String? @db.VarChar(256)
+  auth_srid Int?
+  srtext    String? @db.VarChar(2048)
+  proj4text String? @db.VarChar(2048)
+}
+
+model sync_failures {
+  id            String   @id @db.Uuid
+  created_at    DateTime @db.Timestamptz(6)
+  entity_id     String   @db.Uuid
+  entity_type   String   @db.VarChar(50)
+  error_message String?
+  resolved      Boolean?
+  retry_count   Int?
+  target        String   @db.VarChar(50)
+  updated_at    DateTime @db.Timestamptz(6)
+}
+
+model user_affinities {
+  entity_type  String   @db.VarChar(50)
+  entity_value String   @db.VarChar(255)
+  user_id      String   @db.Uuid
+  score        Decimal? @db.Decimal(5, 4)
+  updated_at   DateTime @db.Timestamptz(6)
+
+  @@id([entity_type, entity_value, user_id])
+}
+
+model user_profiles {
+  id                    String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id               String   @unique @db.Uuid
+  avatar_url            String?  @db.VarChar(255)
+  bio                   String?  @db.VarChar(255)
+  conservation_identity String?  @db.VarChar(255)
+  headphone_preference  Boolean  @default(false)
+  created_at            DateTime @default(now()) @db.Timestamptz(6)
+  updated_at            DateTime @default(now()) @db.Timestamptz(6)
+  users                 users    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model user_sessions {
+  id                 String    @id @db.Uuid
+  created_at         DateTime  @db.Timestamptz(6)
+  device_info        Json?
+  expires_at         DateTime  @db.Timestamptz(6)
+  ip_address         String?   @db.VarChar(255)
+  refresh_token_hash String    @unique(map: "ukk33fiivedrep3oiaffwrh21pv") @db.VarChar(255)
+  revoked_at         DateTime? @db.Timestamptz(6)
+  user_id            String    @db.Uuid
+  users              users     @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk8klxsgb8dcjjklmqebqp1twd5")
+}
+
+model users {
+  id            String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  username      String          @unique @db.VarChar(255)
+  email         String          @unique @db.VarChar(255)
+  password_hash String?         @db.VarChar(255)
+  auth_provider auth_provider   @default(LOCAL)
+  provider_id   String?         @db.VarChar(255)
+  role          user_role       @default(USER)
+  created_at    DateTime        @default(now()) @db.Timestamptz(6)
+  updated_at    DateTime        @default(now()) @db.Timestamptz(6)
+  deleted_at    DateTime?       @db.Timestamptz(6)
+  user_profiles user_profiles?
+  user_sessions user_sessions[]
+}
+
+enum TaxonomyRank {
+  KINGDOM
+  PHYLUM
+  CLASS
+  ORDER
+  FAMILY
+  GENUS
+}
+
+enum ConservationStatus {
+  EX
+  EW
+  CR
+  EN
+  VU
+  NT
+  LC
+  DD
+  NE
+}
+
+enum MediaType {
+  IMAGE
+  AUDIO
+  VIDEO
+}
+
+enum LocationType {
+  PROVINCE
+  ECO_REGION
+  NATIONAL_PARK
+}
+
+enum DistributionType {
+  NATIVE
+  ENDEMIC
+  INVASIVE
+}
+
+enum VnRedListStatus {
+  EX
+  EW
+  CR
+  EN
+  VU
+  NT
+  LC
+  DD
+  NE
+}
+
+enum CitesAppendix {
+  I
+  II
+  III
+  NONE
+}
+
+enum VnDecreeStatus {
+  GROUP_IA
+  GROUP_IB
+  GROUP_IIA
+  GROUP_IIB
+  NONE
+}
+
+enum DietType {
+  CARNIVORE
+  HERBIVORE
+  OMNIVORE
+  INSECTIVORE
+  AUTOTROPH
+}
+
+enum HabitatType {
+  TERRESTRIAL
+  FRESHWATER
+  MARINE
+  CANOPY
+}
+
+enum ActivityPattern {
+  DIURNAL
+  NOCTURNAL
+  CREPUSCULAR
+}
+
+enum PublishStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum auth_provider {
+  LOCAL
+  GOOGLE
+  FACEBOOK
+}
+
+enum authprovider {
+  FACEBOOK
+  GOOGLE
+  LOCAL
+}
+
+enum user_role {
+  USER
+  ADMIN
+}
+
+enum userrole {
+  ADMIN
+  MODERATOR
+  USER
+}

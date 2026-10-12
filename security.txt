@@ -1,0 +1,33 @@
+1. Tầng Xác Thực & Phân Quyền (Authentication)
+Đây là "cánh cửa" của hệ thống, nơi bạn vừa hoàn thiện form Đăng nhập/Đăng ký.
+
+HttpOnly Cookies cho JWT: Tuyệt đối không lưu JWT trong localStorage hay document.cookie (dễ bị mã độc JavaScript đánh cắp qua lỗ hổng XSS). Spring Boot phải trả token về dưới dạng cookie có cờ HttpOnly, Secure (khi chạy HTTPS), và SameSite=Lax/Strict.
+
+Mã hóa mật khẩu (Password Hashing): Không bao giờ lưu mật khẩu dưới dạng văn bản thô (plaintext) xuống Database. Phía Spring Boot bắt buộc phải dùng thuật toán băm một chiều (như Bcrypt hoặc Argon2) trước khi lưu vào PostgreSQL.
+
+Next.js Middleware: Sử dụng Middleware để kiểm tra sự tồn tại của Cookie trước khi cho phép người dùng truy cập các trang nội bộ (như /profile, Góc học tập). Nếu không có cookie, ép điều hướng về /login.
+
+Identity Extraction (Lấy danh tính từ Token, không từ Body): Khi gọi API cập nhật dữ liệu (như lưu bộ sưu tập Yêu thích), Backend phải trích xuất userId từ chính JWT Token, tuyệt đối không tin tưởng userId do Client gửi lên trong body/payload để tránh việc user này sửa dữ liệu của user khác.
+
+2. Tầng Giao Tiếp & API (Spring Boot)
+Đây là "đường truyền" kết nối giữa giao diện Next.js và máy chủ Spring Boot.
+
+Cấu hình CORS nghiêm ngặt: Chỉ cho phép các domain được chỉ định (như http://localhost:3000 hoặc domain production của bạn) được phép gọi API. Bật .allowCredentials(true) để chấp nhận truyền cookie chéo.
+
+Xác thực dữ liệu 2 lớp (Double Validation): Dù Frontend (Next.js) đã báo lỗi định dạng email/mật khẩu, Backend (Spring Boot) bắt buộc phải kiểm tra lại (dùng @Valid, @NotBlank, regex...). Frontend chặn người dùng ngay tình, còn Backend chặn hacker dùng công cụ như Postman bắn payload trực tiếp.
+
+Chống tấn công CSRF (Cross-Site Request Forgery): Vì hệ thống chuẩn bị chuyển sang dùng Cookie thay vì gửi Token trong Header, bạn cần cấu hình Spring Security để chống lại việc hacker lợi dụng phiên đăng nhập của người dùng từ một trang web giả mạo. (Thường giải quyết bằng SameSite cookie hoặc CSRF token).
+
+Rate Limiting (Giới hạn số lần gọi): Đặc biệt tại các API nhạy cảm như Đăng nhập, Đăng ký. Giới hạn một IP chỉ được thử đăng nhập sai 5 lần/phút để chống lại tấn công Brute-force (dò mật khẩu liên tục).
+
+3. Tầng Cơ Sở Dữ Liệu (PostgreSQL)
+Nơi lưu trữ "tài sản" của hệ thống (thông tin người dùng, đa dạng sinh học).
+
+Chống SQL Injection: Luôn sử dụng ORM (Prisma bên Next.js nếu có gọi trực tiếp, và Spring Data JPA / Hibernate bên Spring Boot). Các công cụ này dùng Prepared Statements giúp ngăn chặn hoàn toàn việc tin tặc tiêm mã SQL độc hại vào ô input. Tuyệt đối không nối chuỗi String để tạo câu lệnh SQL.
+
+Quản lý biến môi trường (.env): Thông tin kết nối Database (Username, Password, URL) và "Chìa khóa bí mật" để ký JWT (JWT_SECRET) phải được lưu trong file .env và đưa vào .gitignore. Không bao giờ đẩy (commit) các thông tin này lên GitHub.
+
+4. Tầng Giao Diện (Next.js Client)
+Chống XSS (Cross-Site Scripting): React/Next.js đã tự động xử lý (escape) dữ liệu rất tốt. Tuy nhiên, tuyệt đối tránh sử dụng thuộc tính dangerouslySetInnerHTML khi render bất kỳ nội dung nào do người dùng nhập vào.
+
+Lưu trữ Zustand an toàn: Cẩn thận với những gì bạn đẩy vào Zustand Persist (localStorage). Không lưu các dữ liệu nhạy cảm (như email, số điện thoại thật, thông tin định danh riêng tư) dưới trình duyệt.

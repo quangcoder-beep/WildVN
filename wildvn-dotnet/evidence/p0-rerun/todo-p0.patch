@@ -1,0 +1,100 @@
+--- wildvn-client/docs/desktop-dotnet/todo.md (before)
++++ wildvn-client/docs/desktop-dotnet/todo.md (after)
+@@ -2,7 +2,7 @@
+ 
+ Đọc cùng [plan.md](./plan.md). Đích triển khai là WPF trên .NET 10 và ASP.NET Core 10; PostgreSQL, MinIO và hạ tầng tìm kiếm được giữ lại. Desktop không cần chạy Next.js. Python crawler có thể tiếp tục là công cụ nhập liệu chạy riêng.
+ 
+-Đây là kế hoạch, chưa có task nào được thực hiện. Các đường dẫn `wildvn-dotnet/` bên dưới là đường dẫn dự kiến tại root repository, chưa phải file hiện hữu. Mỗi task chỉ ước lượng tối đa 5 file: **S** = 1–2 file, **M** = 3–5 file. Nếu việc khảo sát khi bắt đầu cho thấy cần hơn 5 file hoặc hơn một phiên triển khai tập trung, tách task thành các phần `Txx.a`, `Txx.b` trước khi viết code; giữ nguyên ID cha và các dependencies. Danh sách file bao gồm file kiểm thử dự kiến, không phải giấy phép bỏ kiểm thử ở task thiếu một test file riêng.
++Cập nhật P0 ngày 2026-10-09: T01–T05 đã có artifacts và commits trong repository `wildvn-dotnet/`; bằng chứng chạy lại nằm ở [TEST-REPORT.md](../../../wildvn-dotnet/handover/TEST-REPORT.md). T02 baseline thật, T04/T05 Windows và coverage toàn production còn **CHƯA KIỂM CHỨNG**; chưa nghiệm thu P0 và chưa triển khai T06. Các checkbox bên dưới chỉ xác nhận trọn tiêu chí có bằng chứng, không tự xác nhận cả task/phase. Mỗi task chỉ ước lượng tối đa 5 file: **S** = 1–2 file, **M** = 3–5 file. Nếu việc khảo sát khi bắt đầu cho thấy cần hơn 5 file hoặc hơn một phiên triển khai tập trung, tách task thành các phần `Txx.a`, `Txx.b` trước khi viết code; giữ nguyên ID cha và các dependencies. Danh sách file bao gồm file kiểm thử dự kiến, không phải giấy phép bỏ kiểm thử ở task thiếu một test file riêng.
+ 
+ Áp dụng TDD cho thay đổi hành vi: ghi nhận RED, chạy GREEN rồi refactor. Với code production .NET, yêu cầu tối thiểu 80% coverage theo gate T27, unit/integration/E2E phù hợp và không skip suite để đạt gate. Checkpoint xác nhận kết quả và ghi bằng chứng vào báo cáo; không tự động commit, push hoặc triển khai production.
+ 
+@@ -13,14 +13,16 @@
+ **Dependencies:** Không. **Scope:** M.
+ 
+ **Acceptance criteria:**
+-- [ ] Mỗi màn hình hiện hữu có nguồn dữ liệu, endpoint, quyền truy cập và trạng thái `đã xác minh`, `chưa xác minh` hoặc `placeholder`; forgot/reset password, quiz và expedition không được đánh dấu đã hoạt động chỉ vì có trang UI.
+-- [ ] Contract fixtures ghi đúng HTTP status, DTO, pagination, enum, lỗi, cookie/XSRF và SSE; giữ riêng response auth hiện tại thay vì mặc định mọi API dùng cùng envelope.
+-- [ ] Mỗi hành vi đưa vào parity có ít nhất một source path và một mẫu request/response hoặc test chứng minh; ML HTTP client không được ghi thành implementation ML có trong repository.
++- [x] Mỗi màn hình hiện hữu có nguồn dữ liệu, endpoint, quyền truy cập và trạng thái `đã xác minh`, `chưa xác minh` hoặc `placeholder`; forgot/reset password, quiz và expedition không được đánh dấu đã hoạt động chỉ vì có trang UI.
++- [x] Contract fixtures ghi đúng HTTP status, DTO, pagination, enum, lỗi, cookie/XSRF và SSE; giữ riêng response auth hiện tại thay vì mặc định mọi API dùng cùng envelope.
++- [x] Mỗi hành vi đưa vào parity có ít nhất một source path và một mẫu request/response hoặc test chứng minh; ML HTTP client không được ghi thành implementation ML có trong repository.
+ 
+ **Verification:** Review đối chiếu controllers, services và API client hiện hữu; contract snapshot check với fixture đã làm sạch, không gọi API production. Rà secret files, ignore rules và trạng thái tracking/chia sẻ của OAuth credentials mà không in giá trị; nếu đã commit hoặc chia sẻ, lập việc rotate server provider secret theo quy trình được phép, không kết luận đã leak chỉ vì file có trên máy.
+ 
+ **Likely files:** `wildvn-dotnet/docs/feature-inventory.md`; `wildvn-dotnet/docs/api-contracts.md`; `wildvn-dotnet/tests/Fixtures/api-contracts.json`.
+ 
++**Bằng chứng T01:** [t01.txt](../../../wildvn-dotnet/evidence/p0-rerun/t01.txt), inventory/contracts source và 9/9 tests; source-backed fixtures, chưa capture Java wire. Runtime Java/providers/ML **CHƯA KIỂM CHỨNG**.
++
+ ## T02 — Fixture PostgreSQL, schema runtime và quyền quản lý migrations
+ 
+ **Mục tiêu:** Tạo baseline từ database thực tế đã được phép truy cập, đối chiếu Flyway, SQL crawler và Prisma; thử restore trước khi quyết định migration .NET.
+@@ -29,13 +31,15 @@
+ 
+ **Acceptance criteria:**
+ - [ ] Schema snapshot và fixture đã làm sạch bao phủ enum, enum array, JSONB, UUID, dữ liệu loài, tài khoản/hash thử nghiệm, favorites, Academy và chat; không lưu dữ liệu cá nhân hay credentials production.
+-- [ ] Restore vào PostgreSQL trống chạy được và đối chiếu counts, constraints, indexes, foreign keys; ghi rõ sai khác giữa schema runtime và các nguồn SQL trong repo.
++- [x] Restore vào PostgreSQL trống chạy được và đối chiếu counts, constraints, indexes, foreign keys; ghi rõ sai khác giữa schema runtime và các nguồn SQL trong repo.
+ - [ ] Có một chủ sở hữu migrations trong thời gian coexistence và sau cutover; Flyway history được bảo toàn, không chạy `EnsureCreated`, tự tạo baseline sai hoặc đồng thời cho EF/Flyway sửa cùng schema.
+ 
+ **Verification:** Integration bằng script restore PostgreSQL fixture; kiểm tra schema diff và thử restore backup độc lập.
+ 
+ **Likely files:** `wildvn-dotnet/docs/database-baseline.md`; `wildvn-dotnet/tests/Fixtures/schema.sql`; `wildvn-dotnet/tests/Fixtures/seed.sql`; `wildvn-dotnet/build/Restore-Fixture.ps1`; `wildvn-dotnet/build/Verify-Schema.ps1`.
+ 
++**Bằng chứng T02:** [t02.txt](../../../wildvn-dotnet/evidence/p0-rerun/t02.txt), PostgreSQL15.18: restore nguồn +backup restore độc lập, mỗi DB11/11 tests, 18 bảng counts/hash bằng nhau; guard tổng hợp96,77%. Schema snapshot hiện là source-derived synthetic fixture. Baseline DB thật, Flyway history/extensions và bảo toàn history thực tế **CHƯA KIỂM CHỨNG**; giữ hai tiêu chí tương ứng chưa tick.
++
+ ## T03 — ASP.NET Core skeleton và contracts dùng chung
+ 
+ **Mục tiêu:** Dựng API .NET 10 với cấu hình theo môi trường, shared DTO và điểm mở rộng theo domain.
+@@ -43,19 +47,23 @@
+ **Dependencies:** T01, T02. **Scope:** M.
+ 
+ **Acceptance criteria:**
+-- [ ] API build/chạy bằng .NET 10; health endpoint phân biệt tiến trình còn sống với dependencies chưa sẵn sàng và không tiết lộ cấu hình nhạy cảm.
++- [x] API build/chạy bằng .NET 10; health endpoint phân biệt tiến trình còn sống với dependencies chưa sẵn sàng và không tiết lộ cấu hình nhạy cảm.
+ - [ ] JSON casing, nullable, enum và envelope khớp fixtures T01; validation/error mapping trả status và thông báo đã quy định.
+-- [ ] Cấu hình secrets đọc từ nguồn ngoài repo; API client desktop có thể tham chiếu contracts mà không tham chiếu implementation server.
++- [x] Cấu hình secrets đọc từ nguồn ngoài repo; API client desktop có thể tham chiếu contracts mà không tham chiếu implementation server.
+ 
+ **Verification:** `dotnet build` API/contracts; unit serialization và integration bằng test host với cấu hình thử nghiệm.
+ 
+ **Likely files:** `wildvn-dotnet/src/WildVN.Api/WildVN.Api.csproj`; `wildvn-dotnet/src/WildVN.Api/Program.cs`; `wildvn-dotnet/src/WildVN.Contracts/WildVN.Contracts.csproj`; `wildvn-dotnet/src/WildVN.Contracts/ApiContracts.cs`; `wildvn-dotnet/tests/WildVN.Api.Tests/ApiBootstrapTests.cs`.
+ 
++**Bằng chứng T03:** [t03.txt](../../../wildvn-dotnet/evidence/p0-rerun/t03.txt), .NET10 build sạch,10/10 tests, API/contracts100% lines,6/6 root branches; curl200/503/404/405. Serialization và lỗi404/405 đã chứng minh; domain validation/business routes chưa port và Java wire parity **CHƯA KIỂM CHỨNG**, nên tiêu chí validation/error tổng hợp chưa tick. External configuration và client reference được đối chiếu source/build, không nạp secret thật.
++
+ ### Checkpoint C01 — Sau T01–T03
+ 
+-- [ ] Inventory và contracts có bằng chứng; placeholder không được tính là tính năng đã migrate.
++- [x] Inventory và contracts có bằng chứng; placeholder không được tính là tính năng đã migrate.
+ - [ ] API build sạch, restore PostgreSQL fixture thành công và ownership migrations đã ghi rõ.
+ 
++**Checkpoint C01 chưa nghiệm thu:** API và source fixture có bằng chứng, migration ownership đã ghi nhưng T02 baseline/history thực tế **CHƯA KIỂM CHỨNG**. Không suy từ restore fixture rằng baseline production đã được bảo toàn.
++
+ ## T04 — WPF shell và ApiClient
+ 
+ **Mục tiêu:** Tạo WPF/MVVM shell, navigation, cấu hình API và HTTP client dùng xuyên suốt ứng dụng.
+@@ -64,12 +72,14 @@
+ 
+ **Acceptance criteria:**
+ - [ ] Shell chạy trên Windows bằng `net10.0-windows`, có navigation và trạng thái loading/error bằng tiếng Việt; thao tác I/O không khóa UI thread.
+-- [ ] ApiClient có timeout, cancellation và error mapping; chỉ retry các request an toàn đã quy định, không retry mặc định POST/mutation.
++- [x] ApiClient có timeout, cancellation và error mapping; chỉ retry các request an toàn đã quy định, không retry mặc định POST/mutation.
+ - [ ] Endpoint cấu hình được theo môi trường; ứng dụng không cần Node.js, Next server hoặc render route web để khởi động.
+ 
+ **Verification:** Build WPF trên Windows; unit ApiClient với HTTP handler giả lập; smoke UI navigation bằng Windows UI Automation.
+ 
+ **Likely files:** `wildvn-dotnet/src/WildVN.Desktop/WildVN.Desktop.csproj`; `wildvn-dotnet/src/WildVN.Desktop/App.xaml`; `wildvn-dotnet/src/WildVN.Desktop/MainWindow.xaml`; `wildvn-dotnet/src/WildVN.Desktop/ShellViewModel.cs`; `wildvn-dotnet/src/WildVN.ApiClient/ApiClient.cs`.
++
++**Bằng chứng T04:** [t04.txt](../../../wildvn-dotnet/evidence/p0-rerun/t04.txt), WPF Release cross-build sạch,33 client +62 desktop tests pass; client100% lines/98,48% branches; ShellViewModel98,65%/97,92%. Windows startup/navigation/dispatcher/UI Automation và yêu cầu không Node/Next ở runtime máy sạch **CHƯA KIỂM CHỨNG**. Source không có dependency Node/Next để startup; chưa thay bằng bằng chứng Windows.
+ 
+ ## T05 — PoC media native và WebView2 cục bộ
+ 
+@@ -86,6 +96,8 @@
+ 
+ **Likely files:** `wildvn-dotnet/src/WildVN.Desktop/Media/MediaPoCView.xaml`; `wildvn-dotnet/src/WildVN.Desktop/Media/NativeMediaPresenter.cs`; `wildvn-dotnet/src/WildVN.Desktop/Media/IsolatedWebMediaPresenter.cs`; `wildvn-dotnet/src/WildVN.Desktop/Media/Assets/media-poc.html`; `wildvn-dotnet/docs/media-poc-results.md`.
+ 
++**Bằng chứng T05:** [t05.txt](../../../wildvn-dotnet/evidence/p0-rerun/t05.txt), WPF cross-build sạch,62 desktop +3 HTML/real-JS DOM-stub tests pass; MediaPolicy100% lines/93,75% mapped branches. Cùng mẫu MinIO, Windows10/11+DPI100/150/200, actual playback/lifecycle/performance/snapshots và lựa chọn renderer cuối **CHƯA KIỂM CHỨNG**. Native/WebView security policy có tests, chưa đủ toàn tiêu chí nên chưa tick. Dừng P0, chờ người dùng xác nhận; T06 chưa thực hiện.
++
+ ## T06 — EF Core/Npgsql mapping schema hiện hữu
+ 
+ **Mục tiêu:** Đọc/ghi đúng PostgreSQL baseline mà không thiết kế lại dữ liệu giữa migration.

@@ -1,0 +1,510 @@
+-- =======================================================================================
+-- VIETNAM BIODIVERSITY SYSTEM - ENTERPRISE-GRADE SCHEMA
+-- Target Scale: 10M+ Users, High Concurrency, Zero-Trust Architecture
+-- Postgres Version: 15+
+-- =======================================================================================
+
+-- =======================================================================================
+-- 1. EXTENSIONS & PREREQUISITES
+-- =======================================================================================
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";          -- UUID generation
+CREATE EXTENSION IF NOT EXISTS "postgis";            -- Geospatial indexing & data types
+CREATE EXTENSION IF NOT EXISTS "vector";             -- AI/RAG embedding vectors
+CREATE EXTENSION IF NOT EXISTS "pg_stat_statements"; -- Observability: Slow queries & cache hits
+CREATE EXTENSION IF NOT EXISTS "pg_trgm";            -- Trigram matching for fast text search
+
+-- =======================================================================================
+-- 2. ENUM TYPES
+-- =======================================================================================
+CREATE TYPE taxonomy_rank AS ENUM ('KINGDOM', 'PHYLUM', 'CLASS', 'ORDER', 'FAMILY', 'GENUS');
+CREATE TYPE conservation_status AS ENUM ('EX', 'EW', 'CR', 'EN', 'VU', 'NT', 'LC', 'DD', 'NE');
+CREATE TYPE media_type AS ENUM ('IMAGE', 'AUDIO', 'VIDEO');
+CREATE TYPE location_type AS ENUM ('PROVINCE', 'ECO_REGION', 'NATIONAL_PARK');
+CREATE TYPE distribution_type AS ENUM ('NATIVE', 'ENDEMIC', 'INVASIVE');
+CREATE TYPE user_role AS ENUM ('USER', 'ADMIN', 'MODERATOR');
+CREATE TYPE quiz_type AS ENUM ('SURVIVAL', 'AUDIO_REFLEX', 'PUZZLE');
+CREATE TYPE observation_status AS ENUM ('PENDING', 'APPROVED', 'REJECTED');
+CREATE TYPE notification_type AS ENUM ('BADGE_UNLOCKED', 'LEVEL_UP', 'OBSERVATION_APPROVED', 'OBSERVATION_REJECTED', 'XP_EARNED', 'SYSTEM');
+CREATE TYPE relationship_type AS ENUM ('PREDATOR_PREY', 'SYMBIOSIS', 'PARASITISM', 'COMPETITION', 'COMMENSALISM');
+
+-- =======================================================================================
+-- 3. CORE TABLES (SECURITY, AUDITING & SOFT DELETE)
+-- =======================================================================================
+
+-- Users Table
+CREATE TABLE users (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    username VARCHAR(100) NOT NULL,
+    email VARCHAR(255) NOT NULL,
+    password_hash VARCHAR(255) NOT NULL, -- Assumes Argon2id handled in backend
+    role user_role DEFAULT 'USER' NOT NULL,
+    xp INT DEFAULT 0 NOT NULL,
+    level INT DEFAULT 1 NOT NULL,
+    
+    -- Audit fields
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    deleted_at TIMESTAMP WITH TIME ZONE,
+    
+    CONSTRAINT chk_xp_positive CHECK (xp >= 0),
+    CONSTRAINT chk_level_positive CHECK (level >= 1),
+    CONSTRAINT chk_username_format CHECK (username ~ '^[a-zA-Z0-9_]{3,30}$'),
+    CONSTRAINT chk_email_format CHECK (email ~* '^[A-Za-z0-9._%-]+@[A-Za-z0-9.-]+[.][A-Za-z]+$')
+);
+
+
+-- Locations
+CREATE TABLE locations (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name VARCHAR(255) NOT NULL,
+    type location_type NOT NULL, 
+    geom GEOMETRY(Geometry, 4326) NOT NULL, 
+    
+    created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    updated_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    deleted_at TIMESTAMP WITH TIME ZONE,
+    
+    CONSTRAINT chk_location_name_not_empty CHECK (length(trim(name)) > 0),
+    CONSTRAINT chk_valid_geometry CHECK (GeometryType(geom) IN ('POINT', 'POLYGON', 'MULTIPOLYGON'))
+);
+
+-- Taxonomy
+CREATE TABLE taxonomy (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    parent_id UUID REFERENCES taxonomy(id) ON DELETE RESTRICT,
+    rank taxonomy_rank NOT NULL,
+    scientific_name VARCHAR(255) NOT NULL,
+    name_vn VARCHAR(255),
+    
+    created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    updated_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    deleted_at TIMESTAMP WITH TIME ZONE,
+    
+    CONSTRAINT chk_taxonomy_parent CHECK (id != parent_id),
+    CONSTRAINT chk_taxonomy_scientific_name_not_empty CHECK (length(trim(scientific_name)) > 0)
+);
+
+-- Species
+CREATE TABLE species (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    taxonomy_id UUID NOT NULL REFERENCES taxonomy(id) ON DELETE RESTRICT,
+    slug VARCHAR(255) NOT NULL,
+    scientific_name VARCHAR(255) NOT NULL,
+    name_vn VARCHAR(255) NOT NULL,
+    conservation_status conservation_status NOT NULL,
+    identification_desc TEXT,
+    biology_desc TEXT,
+    threats_desc TEXT,
+    conservation_desc TEXT,
+    
+    -- Optimized Full-text search Vector
+    search_vector TSVECTOR GENERATED ALWAYS AS (
+        setweight(to_tsvector('simple', coalesce(scientific_name, '')), 'A') ||
+        setweight(to_tsvector('simple', coalesce(name_vn, '')), 'A') ||
+        setweight(to_tsvector('simple', coalesce(identification_desc, '')), 'B') ||
+        setweight(to_tsvector('simple', coalesce(biology_desc, '')), 'C') ||
+        setweight(to_tsvector('simple', coalesce(threats_desc, '')), 'C') ||
+        setweight(to_tsvector('simple', coalesce(conservation_desc, '')), 'C')
+    ) STORED,
+
+    created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    updated_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    deleted_at TIMESTAMP WITH TIME ZONE,
+    
+    CONSTRAINT chk_species_slug_format CHECK (slug ~ '^[a-z0-9]+(?:-[a-z0-9]+)*$'),
+    CONSTRAINT chk_species_name_vn_not_empty CHECK (length(trim(name_vn)) > 0),
+    CONSTRAINT chk_species_scientific_name_not_empty CHECK (length(trim(scientific_name)) > 0)
+);
+
+-- Species Media
+CREATE TABLE species_media (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    species_id UUID NOT NULL REFERENCES species(id) ON DELETE CASCADE,
+    type media_type NOT NULL,
+    url TEXT NOT NULL,
+    is_primary BOOLEAN DEFAULT FALSE NOT NULL,
+    
+    created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    updated_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    deleted_at TIMESTAMP WITH TIME ZONE,
+    
+    CONSTRAINT chk_url_https CHECK (url ~ '^https?://')
+);
+
+-- Species Distribution
+CREATE TABLE species_locations (
+    species_id UUID NOT NULL REFERENCES species(id) ON DELETE CASCADE,
+    location_id UUID NOT NULL REFERENCES locations(id) ON DELETE CASCADE,
+    distribution_type distribution_type DEFAULT 'NATIVE' NOT NULL,
+    created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    PRIMARY KEY (species_id, location_id)
+);
+
+-- AI/RAG Embeddings
+CREATE TABLE species_embeddings (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    species_id UUID NOT NULL REFERENCES species(id) ON DELETE CASCADE,
+    chunk_text TEXT NOT NULL,
+    chunk_index INT NOT NULL CHECK (chunk_index >= 0),
+    source_info JSONB,
+    embedding VECTOR(1536) NOT NULL, -- NOTE: For high scale, consider HALFVEC(1536) in PG16+
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    CONSTRAINT chk_chunk_text_not_empty CHECK (length(trim(chunk_text)) > 0)
+);
+
+-- Pokedex
+CREATE TABLE user_pokedex (
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    species_id UUID NOT NULL REFERENCES species(id) ON DELETE CASCADE,
+    mastery_level INT DEFAULT 0 NOT NULL CHECK (mastery_level >= 0),
+    collected_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    PRIMARY KEY (user_id, species_id)
+);
+
+-- Badges
+CREATE TABLE badges (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name VARCHAR(100) NOT NULL,
+    description TEXT,
+    icon_url TEXT NOT NULL,
+    condition_logic JSONB NOT NULL,
+    
+    created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    updated_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    deleted_at TIMESTAMP WITH TIME ZONE,
+    
+    CONSTRAINT chk_badge_name_not_empty CHECK (length(trim(name)) > 0)
+);
+
+-- User Badges
+CREATE TABLE user_badges (
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    badge_id UUID NOT NULL REFERENCES badges(id) ON DELETE CASCADE,
+    unlocked_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    PRIMARY KEY (user_id, badge_id)
+);
+
+-- Quizzes (Questions)
+CREATE TABLE questions (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    species_id UUID REFERENCES species(id) ON DELETE CASCADE,
+    type quiz_type NOT NULL, 
+    content TEXT NOT NULL,
+    media_url TEXT,
+    
+    created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    updated_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    deleted_at TIMESTAMP WITH TIME ZONE,
+    
+    CONSTRAINT chk_question_content_not_empty CHECK (length(trim(content)) > 0)
+);
+
+-- Answers
+CREATE TABLE answers (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    question_id UUID NOT NULL REFERENCES questions(id) ON DELETE CASCADE,
+    content TEXT NOT NULL,
+    is_correct BOOLEAN DEFAULT FALSE NOT NULL,
+    
+    created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    updated_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    deleted_at TIMESTAMP WITH TIME ZONE,
+    
+    CONSTRAINT chk_answer_content_not_empty CHECK (length(trim(content)) > 0)
+);
+
+-- Partitioned Quiz Attempts
+CREATE TABLE user_quiz_attempts (
+    id UUID NOT NULL DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    question_id UUID NOT NULL REFERENCES questions(id) ON DELETE CASCADE,
+    selected_answer_id UUID REFERENCES answers(id) ON DELETE SET NULL,
+    is_correct BOOLEAN NOT NULL,
+    time_taken_seconds INT CHECK (time_taken_seconds >= 0),
+    attempted_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    PRIMARY KEY (id, attempted_at)
+) PARTITION BY RANGE (attempted_at);
+
+-- Partitioning Strategy (Yearly)
+CREATE TABLE user_quiz_attempts_2024 PARTITION OF user_quiz_attempts FOR VALUES FROM ('2024-01-01') TO ('2025-01-01');
+CREATE TABLE user_quiz_attempts_2025 PARTITION OF user_quiz_attempts FOR VALUES FROM ('2025-01-01') TO ('2026-01-01');
+CREATE TABLE user_quiz_attempts_2026 PARTITION OF user_quiz_attempts FOR VALUES FROM ('2026-01-01') TO ('2027-01-01');
+CREATE TABLE user_quiz_attempts_2027 PARTITION OF user_quiz_attempts FOR VALUES FROM ('2027-01-01') TO ('2028-01-01');
+CREATE TABLE user_quiz_attempts_default PARTITION OF user_quiz_attempts DEFAULT;
+
+-- =======================================================================================
+-- 3b. NEW BUSINESS TABLES
+-- =======================================================================================
+
+-- User Field Observations (Core biodiversity feature)
+CREATE TABLE user_observations (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    species_id UUID REFERENCES species(id) ON DELETE SET NULL, -- NULL if species unidentified
+    observation_point GEOMETRY(Point, 4326) NOT NULL, -- GPS coordinates
+    observed_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    notes TEXT,
+    photo_url TEXT,
+    status observation_status DEFAULT 'PENDING' NOT NULL,
+    reviewed_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    reviewed_at TIMESTAMP WITH TIME ZONE,
+    rejection_reason TEXT,
+    
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    deleted_at TIMESTAMP WITH TIME ZONE,
+    
+    CONSTRAINT chk_observation_photo CHECK (photo_url IS NULL OR photo_url ~ '^https?://'),
+    CONSTRAINT chk_observation_review_logic CHECK (
+        (status = 'PENDING' AND reviewed_by IS NULL AND reviewed_at IS NULL) OR
+        (status IN ('APPROVED', 'REJECTED') AND reviewed_by IS NOT NULL AND reviewed_at IS NOT NULL)
+    ),
+    CONSTRAINT chk_rejection_reason CHECK (
+        (status = 'REJECTED' AND length(trim(rejection_reason)) > 0) OR
+        (status != 'REJECTED' AND rejection_reason IS NULL)
+    )
+);
+
+-- Notifications (Gamification & system alerts)
+CREATE TABLE notifications (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    type notification_type NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    message TEXT NOT NULL,
+    reference_id UUID, -- Points to the related entity (badge_id, observation_id, etc.)
+    is_read BOOLEAN DEFAULT FALSE NOT NULL,
+    read_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    
+    CONSTRAINT chk_notification_title_not_empty CHECK (length(trim(title)) > 0),
+    CONSTRAINT chk_notification_read_logic CHECK (
+        (is_read = TRUE AND read_at IS NOT NULL) OR
+        (is_read = FALSE AND read_at IS NULL)
+    )
+);
+
+-- Species Ecological Relationships
+CREATE TABLE species_relationships (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    species_id_1 UUID NOT NULL REFERENCES species(id) ON DELETE CASCADE,
+    species_id_2 UUID NOT NULL REFERENCES species(id) ON DELETE CASCADE,
+    relationship_type relationship_type NOT NULL,
+    description TEXT,
+    
+    created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    updated_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    deleted_at TIMESTAMP WITH TIME ZONE,
+    
+    CONSTRAINT chk_species_not_self CHECK (species_id_1 != species_id_2),
+    CONSTRAINT chk_species_order CHECK (species_id_1 < species_id_2) -- Prevent reverse duplicates
+);
+
+-- Conservation Status Change History
+CREATE TABLE conservation_history (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    species_id UUID NOT NULL REFERENCES species(id) ON DELETE CASCADE,
+    old_status conservation_status, -- NULL for the first recorded status
+    new_status conservation_status NOT NULL,
+    changed_at DATE NOT NULL,
+    source TEXT NOT NULL, -- Citation/reference (e.g., 'IUCN Red List 2024')
+    notes TEXT,
+    
+    created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    
+    CONSTRAINT chk_status_actually_changed CHECK (old_status IS DISTINCT FROM new_status),
+    CONSTRAINT chk_source_not_empty CHECK (length(trim(source)) > 0)
+);
+
+-- =======================================================================================
+-- 4. ROW LEVEL SECURITY (RLS) - ZERO TRUST
+-- =======================================================================================
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_pokedex ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_quiz_attempts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_observations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
+
+-- Assuming application passes `app.current_user_id` context via SET
+CREATE POLICY users_access_policy ON users FOR ALL 
+USING (id = current_setting('app.current_user_id', true)::uuid OR current_setting('app.user_role', true) IN ('ADMIN', 'MODERATOR'));
+
+CREATE POLICY pokedex_access_policy ON user_pokedex FOR ALL 
+USING (user_id = current_setting('app.current_user_id', true)::uuid OR current_setting('app.user_role', true) IN ('ADMIN', 'MODERATOR'));
+
+CREATE POLICY quiz_attempts_access_policy ON user_quiz_attempts FOR ALL 
+USING (user_id = current_setting('app.current_user_id', true)::uuid OR current_setting('app.user_role', true) IN ('ADMIN', 'MODERATOR'));
+
+CREATE POLICY observations_access_policy ON user_observations FOR ALL 
+USING (user_id = current_setting('app.current_user_id', true)::uuid OR current_setting('app.user_role', true) IN ('ADMIN', 'MODERATOR'));
+
+CREATE POLICY notifications_access_policy ON notifications FOR ALL 
+USING (user_id = current_setting('app.current_user_id', true)::uuid OR current_setting('app.user_role', true) IN ('ADMIN', 'MODERATOR'));
+
+-- =======================================================================================
+-- 5. TRIGGERS & BUSINESS LOGIC ENFORCEMENT
+-- =======================================================================================
+
+-- Auto-update `updated_at`
+CREATE OR REPLACE FUNCTION trigger_set_timestamp() RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = CURRENT_TIMESTAMP;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER set_timestamp_users BEFORE UPDATE ON users FOR EACH ROW EXECUTE FUNCTION trigger_set_timestamp();
+CREATE TRIGGER set_timestamp_locations BEFORE UPDATE ON locations FOR EACH ROW EXECUTE FUNCTION trigger_set_timestamp();
+CREATE TRIGGER set_timestamp_taxonomy BEFORE UPDATE ON taxonomy FOR EACH ROW EXECUTE FUNCTION trigger_set_timestamp();
+CREATE TRIGGER set_timestamp_species BEFORE UPDATE ON species FOR EACH ROW EXECUTE FUNCTION trigger_set_timestamp();
+CREATE TRIGGER set_timestamp_species_media BEFORE UPDATE ON species_media FOR EACH ROW EXECUTE FUNCTION trigger_set_timestamp();
+CREATE TRIGGER set_timestamp_badges BEFORE UPDATE ON badges FOR EACH ROW EXECUTE FUNCTION trigger_set_timestamp();
+CREATE TRIGGER set_timestamp_questions BEFORE UPDATE ON questions FOR EACH ROW EXECUTE FUNCTION trigger_set_timestamp();
+CREATE TRIGGER set_timestamp_answers BEFORE UPDATE ON answers FOR EACH ROW EXECUTE FUNCTION trigger_set_timestamp();
+CREATE TRIGGER set_timestamp_user_observations BEFORE UPDATE ON user_observations FOR EACH ROW EXECUTE FUNCTION trigger_set_timestamp();
+CREATE TRIGGER set_timestamp_species_relationships BEFORE UPDATE ON species_relationships FOR EACH ROW EXECUTE FUNCTION trigger_set_timestamp();
+
+-- Validate taxonomy hierarchy ranks (Parent Rank > Child Rank)
+CREATE OR REPLACE FUNCTION validate_taxonomy_hierarchy() RETURNS TRIGGER AS $$
+DECLARE
+    parent_rank taxonomy_rank;
+    rank_value INT;
+    parent_rank_value INT;
+BEGIN
+    IF NEW.parent_id IS NOT NULL THEN
+        SELECT rank INTO parent_rank FROM taxonomy WHERE id = NEW.parent_id;
+        
+        rank_value := CASE NEW.rank
+            WHEN 'KINGDOM' THEN 1 WHEN 'PHYLUM' THEN 2 WHEN 'CLASS' THEN 3
+            WHEN 'ORDER' THEN 4 WHEN 'FAMILY' THEN 5 WHEN 'GENUS' THEN 6 END;
+        
+        parent_rank_value := CASE parent_rank
+            WHEN 'KINGDOM' THEN 1 WHEN 'PHYLUM' THEN 2 WHEN 'CLASS' THEN 3
+            WHEN 'ORDER' THEN 4 WHEN 'FAMILY' THEN 5 WHEN 'GENUS' THEN 6 END;
+        
+        IF rank_value <= parent_rank_value THEN
+            RAISE EXCEPTION 'Invalid taxonomy hierarchy: Parent rank (%) must be strictly higher than Child rank (%)', parent_rank, NEW.rank;
+        END IF;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER validate_taxonomy_parent_rank BEFORE INSERT OR UPDATE ON taxonomy
+FOR EACH ROW EXECUTE FUNCTION validate_taxonomy_hierarchy();
+
+-- =======================================================================================
+-- 6. ADVANCED ENTERPRISE INDEXES & CONFLICT RESOLUTION
+-- =======================================================================================
+
+-- A. Soft Delete Unique Conflicts
+CREATE UNIQUE INDEX idx_users_email_unique ON users(LOWER(email)) WHERE deleted_at IS NULL;
+CREATE UNIQUE INDEX idx_users_username_unique ON users(LOWER(username)) WHERE deleted_at IS NULL;
+CREATE UNIQUE INDEX idx_species_slug_unique ON species(LOWER(slug)) WHERE deleted_at IS NULL;
+CREATE UNIQUE INDEX idx_species_scientific_name_unique ON species(LOWER(scientific_name)) WHERE deleted_at IS NULL;
+CREATE UNIQUE INDEX idx_badges_name_unique ON badges(LOWER(name)) WHERE deleted_at IS NULL;
+
+-- B. Hard Integrity Rules
+CREATE UNIQUE INDEX idx_taxonomy_unique_node ON taxonomy(COALESCE(parent_id, '00000000-0000-0000-0000-000000000000'), LOWER(scientific_name), rank) WHERE deleted_at IS NULL;
+CREATE UNIQUE INDEX idx_answers_single_correct ON answers(question_id) WHERE is_correct = TRUE AND deleted_at IS NULL;
+CREATE UNIQUE INDEX idx_species_media_primary_unique ON species_media(species_id) WHERE is_primary = TRUE AND deleted_at IS NULL;
+CREATE UNIQUE INDEX uq_species_chunk ON species_embeddings(species_id, chunk_index);
+
+-- C. Heavy Read Optimization (Composite & Covering)
+CREATE INDEX idx_user_quiz_attempts_user_time ON user_quiz_attempts(user_id, attempted_at DESC);
+CREATE INDEX idx_species_taxonomy_status ON species(taxonomy_id, conservation_status) INCLUDE (scientific_name, name_vn, slug);
+CREATE INDEX idx_species_locations_lookup ON species_locations(location_id, species_id);
+
+-- D. Pagination & Sorting
+CREATE INDEX idx_species_created_at_desc ON species(created_at DESC);
+CREATE INDEX idx_users_xp_desc ON users(xp DESC, created_at DESC);
+CREATE INDEX idx_species_embeddings_pagination ON species_embeddings(species_id, created_at DESC);
+
+-- E. Search & Geospatial Indices
+CREATE INDEX idx_species_search_vector ON species USING GIN (search_vector);
+CREATE INDEX idx_species_name_trgm ON species USING GIN (name_vn gin_trgm_ops); -- Alternative fast text search
+CREATE INDEX idx_locations_geom ON locations USING GIST (geom);
+CREATE INDEX idx_badges_condition_logic ON badges USING GIN (condition_logic);
+CREATE INDEX idx_species_embeddings_embedding ON species_embeddings USING hnsw (embedding vector_cosine_ops) WITH (m = 16, ef_construction = 64);
+
+
+-- F. New Table Indexes
+CREATE INDEX idx_observations_user_id ON user_observations(user_id, created_at DESC);
+CREATE INDEX idx_observations_species_id ON user_observations(species_id) WHERE species_id IS NOT NULL;
+CREATE INDEX idx_observations_status ON user_observations(status) WHERE status = 'PENDING';
+CREATE INDEX idx_observations_point ON user_observations USING GIST (observation_point);
+CREATE INDEX idx_notifications_user_unread ON notifications(user_id, created_at DESC) WHERE is_read = FALSE;
+CREATE INDEX idx_notifications_user_all ON notifications(user_id, created_at DESC);
+CREATE INDEX idx_species_rel_species1 ON species_relationships(species_id_1);
+CREATE INDEX idx_species_rel_species2 ON species_relationships(species_id_2);
+CREATE UNIQUE INDEX idx_species_rel_unique ON species_relationships(species_id_1, species_id_2, relationship_type) WHERE deleted_at IS NULL;
+CREATE INDEX idx_conservation_history_species ON conservation_history(species_id, changed_at DESC);
+
+-- G. Standard FK Lookups
+CREATE INDEX idx_taxonomy_parent_id ON taxonomy(parent_id);
+CREATE INDEX idx_species_media_species_id ON species_media(species_id);
+CREATE INDEX idx_species_locations_species_id ON species_locations(species_id);
+CREATE INDEX idx_user_pokedex_user_id ON user_pokedex(user_id);
+CREATE INDEX idx_answers_question_id ON answers(question_id);
+CREATE INDEX idx_uqa_question_id ON user_quiz_attempts(question_id);
+
+-- H. Active State B-Trees
+CREATE INDEX idx_species_active ON species(id) WHERE deleted_at IS NULL;
+CREATE INDEX idx_users_active ON users(id) WHERE deleted_at IS NULL;
+
+-- =======================================================================================
+-- 7. CACHING & READ OPTIMIZATION (MATERIALIZED VIEWS)
+-- =======================================================================================
+-- Note: Refresh these concurrently via CRON: `REFRESH MATERIALIZED VIEW CONCURRENTLY mv_leaderboard;`
+CREATE MATERIALIZED VIEW mv_leaderboard AS
+SELECT id, username, xp, level
+FROM users
+WHERE deleted_at IS NULL
+ORDER BY xp DESC, created_at DESC;
+CREATE UNIQUE INDEX idx_mv_leaderboard_id ON mv_leaderboard(id);
+
+CREATE MATERIALIZED VIEW mv_species_summary AS
+SELECT s.id, s.scientific_name, s.name_vn, t.rank, t.name_vn as taxonomy_name_vn, s.conservation_status,
+       COUNT(up.user_id) as total_collectors
+FROM species s
+JOIN taxonomy t ON s.taxonomy_id = t.id
+LEFT JOIN user_pokedex up ON s.id = up.species_id
+WHERE s.deleted_at IS NULL
+GROUP BY s.id, s.scientific_name, s.name_vn, t.rank, t.name_vn, s.conservation_status;
+CREATE UNIQUE INDEX idx_mv_species_summary_id ON mv_species_summary(id);
+
+-- Redis Strategy Note:
+-- - Cache the Leaderboard JSON response for 5 minutes.
+-- - Cache standard Taxonomy tree for 24h (invalidate on DB trigger or webhook).
+-- - Use external Elasticsearch instance if `tsvector` + `pg_trgm` CPU limits are reached under peak load.
+
+-- =======================================================================================
+-- 8. OPERATIONAL READINESS & MIGRATION STRATEGY
+-- =======================================================================================
+-- Migration (Zero Downtime):
+--  - Always run `CREATE INDEX CONCURRENTLY` in production.
+--  - Apply constraints using `NOT VALID` followed by `ALTER TABLE ... VALIDATE CONSTRAINT`.
+-- Backup (PITR):
+--  - Enable WAL archiving (`archive_mode = on`). Base backups daily via `pg_basebackup`. 
+--  - Ensure S3/Blob storage configuration guarantees 30-day Point-in-Time-Recovery window.
+-- Monitoring:
+--  - `pg_stat_statements` enabled. Monitor Buffer Cache Hit Ratio (Goal > 99%).
+--  - Use infrastructure-level logging (Nginx/API Gateway/ELK) for abuse detection.

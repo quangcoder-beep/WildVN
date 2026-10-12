@@ -1,0 +1,56 @@
+HELP.md
+.gradle
+build/
+!gradle/wrapper/gradle-wrapper.jar
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+bin/
+!**/src/main/**/bin/
+!**/src/test/**/bin/
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+out/
+!**/src/main/**/out/
+!**/src/test/**/out/
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+### VS Code ###
+.vscode/
+
+# Local runtime secrets
+.env
+
+# Local environment files (commit templates only)
+.env.*
+!.env.example
+
+# Runtime logs and test artifacts
+*.log
+*.log.*
+/test-results/
+/playwright-report/
+/coverage/
+
+# Local credential downloads and private keys
+client_secret*.json
+*.key
+*.pem

@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>net472;net10.0-windows</TargetFrameworks>
+    <OutputType>WinExe</OutputType>
+    <UseWindowsForms Condition="'$(TargetFramework)' == 'net10.0-windows'">true</UseWindowsForms>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <StartupObject>WildVN.Desktop.Program</StartupObject>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(TargetFramework)' == 'net472'">
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Net.Http" />
+    <Content Include="../../build/LibVLCSharp.dll.config" Link="LibVLCSharp.dll.config" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0-windows'">
+    <PackageReference Include="VideoLAN.LibVLC.Windows" Version="3.0.24" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(RuntimeIdentifier)' == 'win-x64'">
+    <VlcWindowsX64IncludeFiles Include="libvlc.dll;libvlccore.dll;plugins\%2A%2A" />
+    <VlcWindowsX64ExcludeFiles Include="plugins\%2A%2A\%2A.jar" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="LibVLCSharp" Version="3.10.1" />
+    <!-- Historical T05 WPF adapters remain until WF02 parity, outside the active client. -->
+    <Compile Remove="App.xaml.cs;MainWindow.xaml.cs;Media/NativeMediaPresenter.cs;Media/IsolatedWebMediaPresenter.cs;Media/MediaPoCView.xaml.cs" />
+    <Content Include="Media/Assets/media-poc.html" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <ProjectReference Include="../WildVN.ApiClient/WildVN.ApiClient.csproj" />
+  </ItemGroup>
+</Project>

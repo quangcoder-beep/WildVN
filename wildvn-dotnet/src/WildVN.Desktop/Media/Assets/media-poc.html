@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self'; media-src 'self'; connect-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'; style-src 'sha256-YtORluY7CUdvkIeYlVy+wdUqVs+jYQ9rhDMAciQVauo='; script-src 'sha256-SwSG8iJFRBkJih9a5peTkLFUT9iP1SVnH/3NTIIW7vY='"><title>WildVN media PoC cục bộ</title><style>
+body { margin:0; background:#12241d; color:#f2f1e8; font:16px system-ui; padding:18px; }
+.hero { position:relative; border:1px solid #637963; padding:18px; border-radius:12px; }
+h1 { font-size:28px; margin:0 0 10px; } img { max-width:100%; max-height:160px; }
+video { width:100%; max-height:240px; background:#08150e; } audio { width:100%; }
+button { margin:8px 6px 8px 0; padding:8px; } .motion { animation:breathe 4s infinite alternate; }
+@keyframes breathe { from { opacity:.85; } to { opacity:1; } }
+@media (prefers-reduced-motion:reduce) { .motion { animation:none; } }
+</style></head><body><section class="hero"><h1>Khám phá thiên nhiên Việt Nam</h1><p>Mẫu trình bày trang chủ / chi tiết. Nội dung tổng hợp; chưa nối API loài.</p><img id="image" alt="Ảnh mẫu cục bộ"><video id="video" muted controls playsinline></video><audio id="audio" muted controls></audio><div><button id="play">Phát</button><button id="pause">Tạm dừng</button><button id="stop">Dừng</button></div><p id="status" role="status">Chưa chọn mẫu media.</p></section><script>
+(() => {
+  const video=document.getElementById('video'), audio=document.getElementById('audio');
+  const image=document.getElementById('image'), status=document.getElementById('status');
+  const players=[video,audio]; let observedFrames=0, disposed=false;
+  const allowed=/^[a-z0-9][a-z0-9_-]*\.(jpg|jpeg|png|webp|mp4|webm|wav|mp3|ogg)$/;
+  function play() { players.filter(p=>p.getAttribute('src')).forEach(p=>p.play().catch(()=>{status.textContent='Không phát được mẫu; kiểm tra file/codec.';})); }
+  function pause() { players.forEach(p=>p.pause()); }
+  function stop() { pause(); players.forEach(p=>{if(p.readyState>0)p.currentTime=0;}); }
+  function mute(value) { players.forEach(p=>p.muted=value); }
+  function setReducedMotion(value) { document.querySelector('.hero').classList.toggle('motion',!value); }
+  function loadSamples(samples) {
+    stop(); mute(true); setReducedMotion(true); observedFrames=0;
+    for(const [kind,element] of [['image',image],['video',video],['audio',audio]]) {
+      element.removeAttribute('src');
+      if(samples[kind] && allowed.test(samples[kind])) element.setAttribute('src',samples[kind]);
+    }
+    status.textContent='Mẫu cục bộ đã chọn; codec/loading cần kiểm tra trên Windows.';
+  }
+  function cleanup() { stop(); disposed=true; players.forEach(p=>{p.removeAttribute('src');p.load();}); image.removeAttribute('src'); }
+  for(const element of [image,...players]) element.addEventListener('error',()=>{status.textContent='Không đọc được mẫu media cục bộ.';});
+  players.forEach(p=>p.addEventListener('loadeddata',()=>{status.textContent='Sẵn sàng phát mẫu WebView2.';}));
+  if(video.requestVideoFrameCallback) {
+    const frame=()=>{ observedFrames++; if(!disposed)video.requestVideoFrameCallback(frame); };
+    video.requestVideoFrameCallback(frame);
+  }
+  function metrics() { const quality=video.getVideoPlaybackQuality ? video.getVideoPlaybackQuality() : null;
+    return { observedFrames, totalVideoFrames:quality?.totalVideoFrames??null, droppedVideoFrames:quality?.droppedVideoFrames??null, paused:video.paused, muted:video.muted }; }
+  window.mediaPoc={play,pause,stop,mute,setReducedMotion,loadSamples,metrics};
+  document.getElementById('play').onclick=play; document.getElementById('pause').onclick=pause; document.getElementById('stop').onclick=stop;
+  document.addEventListener('visibilitychange',()=>{if(document.hidden)pause();});
+  window.addEventListener('pagehide',cleanup);
+})();
+</script></body></html>

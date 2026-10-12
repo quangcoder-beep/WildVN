@@ -1,0 +1,87 @@
+pipeline {
+
+    agent {
+        docker {
+            image 'node:22-bookworm'
+        }
+    }
+
+    options {
+        skipDefaultCheckout(true)
+        disableConcurrentBuilds()
+        timeout(time: 20, unit: 'MINUTES')
+        buildDiscarder(logRotator(numToKeepStr: '10'))
+    }
+
+    environment {
+        CI = 'true'
+        NEXT_TELEMETRY_DISABLED = '1'
+    }
+
+    stages {
+
+        stage('Checkout') {
+            steps {
+                deleteDir()
+
+                checkout scm
+
+                script {
+                    env.CLIENT_DIR =
+                        fileExists('wildvn-client/package.json')
+                        ? 'wildvn-client'
+                        : '.'
+                }
+            }
+        }
+
+        stage('Install') {
+            steps {
+                dir(env.CLIENT_DIR) {
+                    sh 'npm ci'
+                }
+            }
+        }
+
+        stage('Quality Check') {
+            steps {
+                dir(env.CLIENT_DIR) {
+                    sh 'npm run lint --if-present'
+                    sh 'npm run typecheck --if-present'
+                }
+            }
+        }
+
+        stage('Test') {
+            steps {
+                dir(env.CLIENT_DIR) {
+                    sh '''
+                        mkdir -p reports
+
+                        npx --no-install tsx --test \
+                          --test-reporter=spec \
+                          --test-reporter=junit \
+                          --test-reporter-destination=stdout \
+                          --test-reporter-destination=reports/tests.xml \
+                          scripts/*.test.ts
+                    '''
+                }
+            }
+
+            post {
+                always {
+                    junit testResults: "${env.CLIENT_DIR}/reports/tests.xml",
+                          allowEmptyResults: false
+                }
+            }
+        }
+
+        stage('Build') {
+            steps {
+                dir(env.CLIENT_DIR) {
+                    sh 'npm run build'
+                }
+            }
+        }
+    }
+}
